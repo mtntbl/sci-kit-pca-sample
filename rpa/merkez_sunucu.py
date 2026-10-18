@@ -305,7 +305,7 @@ class Merkez:
         rob = P.tablo(["Robot", "Durum", "Makine", "Son görülme", "Çalışan iş"], [
             [P.e(r["ad"]), P.rozet(self._robot_durum(r, esik)), P.e(r["makine"]), P.zaman(r["son_gorulme"]),
              f'<a href="/isler/{r["calisan_is"]}">#{r["calisan_is"]}</a>' if r["calisan_is"] else "—"]
-            for r in robotlar], "Henüz robot eklenmedi — Robotlar sayfasından ekleyin.")
+            for r in robotlar], "Henüz robot eklenmedi — Robotlar sayfasından ekleyin.", kirilmaz={0, 1, 3})
         isler = db.sorgu("SELECT * FROM isler ORDER BY id DESC LIMIT 15")
         kuy = db.kuyruk_ozet()
         govde = (kpi_html + '<div class="kart"><h2 style="margin-top:0">Robotlar</h2>' + rob + "</div>"
@@ -328,7 +328,7 @@ class Merkez:
              P.e(j["robot"] or (f"→ {j['hedef_robot']}" if j["hedef_robot"] else "herhangi")),
              f'{j["deneme"]}/{j["max_deneme"]}', P.zaman(j["olusturma"]),
              P.sure(j["baslama"], j["bitis"]) if j["baslama"] else "—", P.e(j["olusturan"])]
-            for j in isler], "Henüz iş yok")
+            for j in isler], "Henüz iş yok", kirilmaz={0, 2, 3, 4, 5, 6})
 
     def _kuyruk_ozet_tablosu(self, kuy):
         return P.tablo(["Kuyruk", "Yeni", "İşleniyor", "Başarılı", "Başarısız", "Toplam"], [
@@ -450,9 +450,9 @@ class Merkez:
             satirlar.append([o["id"], P.e(o["referans"]), P.rozet(o["durum"]), f'{o["deneme"]}/{o["max_deneme"]}',
                              P.e(o["robot"] or "—"),
                              f'<a href="/isler/{o["is_id"]}">#{o["is_id"]}</a>' if o["is_id"] else "—",
-                             P.zaman(o["olusturma"]), P.zaman(o["bitis"]), P.json_goster(o["sonuc"]), hata, eylem])
+                             P.zaman(o["olusturma"]), P.zaman(o["bitis"]), P.oge_sonucu(o["sonuc"]), hata, eylem])
         return P.tablo(["#", "Referans", "Durum", "Deneme", "Robot", "İş", "Eklenme", "Bitiş", "Sonuç", "Hata", ""],
-                       satirlar, "Öğe yok")
+                       satirlar, "Öğe yok", kirilmaz={1, 2, 3, 4, 5, 6, 7, 10})
 
     async def kuyruklar(self, request, k):
         return HTMLResponse(P.sayfa("Kuyruklar", self._kuyruk_ozet_tablosu(self.db.kuyruk_ozet()), k, "/kuyruklar",

@@ -42,7 +42,7 @@ pre{background:#0f141a;color:#d7e0ea;padding:12px;border-radius:6px;overflow:aut
 .uyari{background:var(--sari-a);color:var(--sari);padding:10px 14px;border-radius:6px;margin-bottom:14px}
 .hata{background:var(--kirmizi-a);color:var(--kirmizi);padding:10px 14px;border-radius:6px;margin-bottom:14px}
 .basari{background:var(--yesil-a);color:var(--yesil);padding:10px 14px;border-radius:6px;margin-bottom:14px}
-.soluk{color:var(--soluk)}.anahtar{font-family:Consolas,monospace;background:var(--gri-a);padding:8px;border-radius:6px;word-break:break-all;display:block}
+.soluk{color:var(--soluk)}.nw{white-space:nowrap}.anahtar{font-family:Consolas,monospace;background:var(--gri-a);padding:8px;border-radius:6px;word-break:break-all;display:block}
 .giris{max-width:360px;margin:10vh auto}.giris form{display:flex;flex-direction:column;gap:12px}
 .filtre a{margin-right:10px}
 @media (max-width:640px){header nav a{padding:10px 7px}main{padding:14px 12px}}
@@ -102,11 +102,13 @@ def dugme_form(eylem, etiket, kullanici, sinif="ikincil", onay=None, gizli=None)
             f'<button class="{sinif}">{e(etiket)}</button></form>')
 
 
-def tablo(basliklar, satirlar, bos="Kayıt yok"):
+def tablo(basliklar, satirlar, bos="Kayıt yok", kirilmaz=()):
+    """kirilmaz: satır sonuna kırılmayacak sütunların sıra numaraları."""
     if not satirlar:
         return f'<p class="soluk">{e(bos)}</p>'
     th = "".join(f"<th>{e(b)}</th>" for b in basliklar)
-    tr = "".join("<tr>" + "".join(f"<td>{h}</td>" for h in s) + "</tr>" for s in satirlar)
+    tr = "".join("<tr>" + "".join(f'<td{" class=nw" if i in kirilmaz else ""}>{h}</td>' for i, h in enumerate(s))
+                 + "</tr>" for s in satirlar)
     return f'<div class="tablo"><table><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table></div>'
 
 
@@ -142,6 +144,26 @@ def giris_sayfasi(hata=None):
 <label>Parola<input name="sifre" type="password" autocomplete="current-password" required></label>
 <button>Giriş</button></form></div>"""
     return sayfa("Giriş", govde)
+
+
+def oge_sonucu(s):
+    """Kuyruk öğesi sonucunu kısa gösterir: dosya yolları yalnızca adıyla (tam yol üzerine gelince)."""
+    try:
+        d = json.loads(s) if isinstance(s, str) else (s or {})
+    except Exception:
+        return e(s)
+    if not isinstance(d, dict) or not d:
+        return ""
+    dosyalar, diger = [], []
+    for k, v in d.items():
+        metin = str(v)
+        if isinstance(v, str) and ("/" in metin or "\\" in metin) and "." in metin[-6:]:
+            ad = metin.replace("\\", "/").rsplit("/", 1)[-1]
+            dosyalar.append(f'<span title="{e(metin)}">📄 {e(ad)}</span>')
+        elif k != "ad_soyad":
+            diger.append(f"{e(k)}: <b>{e(v)}</b>")
+    ust = e(d["ad_soyad"]) + "<br>" if d.get("ad_soyad") else ""
+    return ust + "<br>".join(dosyalar) + ('<br><span class="soluk">' + " · ".join(diger) + "</span>" if diger else "")
 
 
 def json_goster(s):
