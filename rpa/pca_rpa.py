@@ -141,6 +141,8 @@ def app_dir():
 
 def resolve(path, base):
     path = os.path.expandvars(os.path.expanduser(path.strip()))
+    if os.sep == "/":  # config.ini Windows ayırıcısıyla yazılmış olabilir
+        path = path.replace("\\", "/")
     return path if os.path.isabs(path) else os.path.join(base, path)
 
 

@@ -1,4 +1,4 @@
-name: Build PCA RPA (Windows)
+name: Build RPA Bot (Windows)
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
 
 permissions:
   contents: write
+
+env:
+  PYTHONUTF8: "1"
 
 jobs:
   build:
@@ -23,49 +26,101 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: rpa/requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Build exe
-        run: pyinstaller --noconfirm --clean --onefile --console --name PCA_RPA pca_rpa.py
-
-      - name: Smoke test
+      - name: Install Tesseract OCR + Turkish language data
         run: |
-          New-Item -ItemType Directory -Force smoke | Out-Null
-          Copy-Item dist\PCA_RPA.exe smoke\
-          Copy-Item config.ini smoke\
-          (Get-Content smoke\config.ini) -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content smoke\config.ini
-          New-Item -ItemType Directory -Force smoke\input | Out-Null
-          Copy-Item ornek_veri\data2.txt smoke\input\
-          smoke\PCA_RPA.exe --once
-          if ($LASTEXITCODE -ne 0) { throw "Smoke test failed" }
-          $x = Get-ChildItem smoke\output -Recurse -Filter *.xlsx
-          if (-not $x) { throw "No Excel output" }
-          Get-ChildItem smoke -Recurse | Select-Object FullName
+          choco install tesseract -y --no-progress
+          $t = "C:\Program Files\Tesseract-OCR"
+          if (-not (Test-Path "$t\tesseract.exe")) { throw "Tesseract not installed" }
+          foreach ($l in "tur", "eng", "osd") {
+            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata_fast/raw/main/$l.traineddata" -OutFile "$t\tessdata\$l.traineddata"
+          }
+          & "$t\tesseract.exe" --list-langs
+
+      - name: Build exe (PyInstaller onedir)
+        run: pyinstaller --noconfirm --clean RPA_Bot.spec
 
       - name: Assemble package
         run: |
           $p = "paket"
-          foreach ($d in "input","output","archive","error","logs","ornek_veri") { New-Item -ItemType Directory -Force "$p\$d" | Out-Null }
-          foreach ($d in "input","output","archive","error","logs") { New-Item -ItemType File -Force "$p\$d\.gitkeep" | Out-Null }
-          Copy-Item dist\PCA_RPA.exe, config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat $p\
-          Copy-Item ornek_veri\* "$p\ornek_veri\"
-          Compress-Archive -Path "$p\*" -DestinationPath PCA_RPA_Windows.zip -Force
+          New-Item -ItemType Directory -Force $p | Out-Null
+          Copy-Item -Recurse dist\RPA_Bot\* $p\
+          foreach ($d in "input","input\ise_giris","output","archive","error","logs") {
+            New-Item -ItemType Directory -Force "$p\$d" | Out-Null
+            New-Item -ItemType File -Force "$p\$d\.gitkeep" | Out-Null
+          }
+          Copy-Item config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat $p\
+          Copy-Item -Recurse gorevler $p\gorevler
+          Copy-Item -Recurse ornek_veri $p\ornek_veri
+          # Tesseract (taşınabilir): yalnızca çalışma için gerekli dosyalar
+          $t = "C:\Program Files\Tesseract-OCR"
+          New-Item -ItemType Directory -Force "$p\tesseract\tessdata" | Out-Null
+          Copy-Item "$t\*.exe", "$t\*.dll" "$p\tesseract\" -Exclude "*training*", "unicharset_extractor.exe", "wordlist2dawg.exe", "uninstall.exe"
+          Copy-Item "$t\tessdata\tur.traineddata", "$t\tessdata\eng.traineddata", "$t\tessdata\osd.traineddata" "$p\tesseract\tessdata\"
+          if (Test-Path "$t\tessdata\configs") { Copy-Item -Recurse "$t\tessdata\configs" "$p\tesseract\tessdata\configs" }
+          Copy-Item "$t\*.txt", "$t\*.md" "$p\tesseract\" -ErrorAction SilentlyContinue
+          "{0:N0} MB" -f ((Get-ChildItem $p -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          Compress-Archive -Path "$p\*" -DestinationPath RPA_Bot_Windows.zip -Force
 
-      - uses: actions/upload-artifact@v4
+      - name: Smoke test - setup check, PCA, OCR onboarding, Mikro dry run
+        run: |
+          # Paket kopyasında test et; PATH'teki Tesseract'ı gizle ki paketteki kullanılsın
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Tesseract' }) -join ';'
+          Expand-Archive RPA_Bot_Windows.zip -DestinationPath smoke -Force
+          Set-Location smoke
+          (Get-Content config.ini) -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content -Encoding utf8 config.ini
+          function Run([string[]]$a) { & .\RPA_Bot.exe @a; if ($LASTEXITCODE -ne 0) { throw "RPA_Bot $a failed ($LASTEXITCODE)" } }
+          Run kontrol
+          Copy-Item ornek_veri\data2.txt input\
+          Run pca, --once
+          Copy-Item ornek_veri\ise_giris\* input\ise_giris\
+          Run ise-giris
+          $x = Get-ChildItem output\ise_giris -Recurse -Filter "*.xlsx"
+          if ($x.Count -lt 2) { throw "Expected 2 onboarding Excel files" }
+          Run robot, mikro_personel_giris, --variable, KURU_CALISMA:evet
+          foreach ($g in (Get-ChildItem gorevler\*.robot).BaseName) { Run robot, $g, --dryrun }
+
+      - name: Smoke test - Notepad desktop automation (RPA.Windows)
+        continue-on-error: true
+        working-directory: rpa/smoke
+        run: |
+          .\RPA_Bot.exe robot ornek_masaustu_notepad
+          if ($LASTEXITCODE -ne 0) { throw "notepad robot failed" }
+          Get-Content output\notepad_ornek.txt
+
+      - name: Smoke test - browser automation (RPA.Browser.Selenium)
+        continue-on-error: true
+        working-directory: rpa/smoke
+        run: |
+          .\RPA_Bot.exe robot ornek_tarayici
+          if ($LASTEXITCODE -ne 0) { throw "browser robot failed" }
+
+      - name: Upload smoke-test logs
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: PCA_RPA_Windows
-          path: rpa/paket/
+          name: smoke-logs
+          path: |
+            rpa/smoke/logs/
+            rpa/smoke/output/*.txt
+            rpa/smoke/error/
+          if-no-files-found: ignore
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rpa-v1.0.0-${{ github.run_number }}
-          name: PCA RPA Windows (build ${{ github.run_number }})
+          tag_name: rpa-v2.0.0-${{ github.run_number }}
+          name: RPA Bot Windows v2.0.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
-          files: rpa/PCA_RPA_Windows.zip
+          files: rpa/RPA_Bot_Windows.zip
           body: |
-            PCA RPA botu – Windows paketi. `PCA_RPA_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
+            RPA Bot – Windows paketi (PCA + OCR + işe giriş + Robot Framework + MCP).
+            `RPA_Bot_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
+            Tesseract OCR (Türkçe dil paketiyle) paketin içindedir; ayrıca kurulum gerekmez.
