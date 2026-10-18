@@ -1,0 +1,6 @@
+@echo off
+chcp 65001 >nul
+cd /d "%~dp0"
+echo input klasoru izleniyor. Durdurmak icin Ctrl+C ...
+PCA_RPA.exe --watch
+pause

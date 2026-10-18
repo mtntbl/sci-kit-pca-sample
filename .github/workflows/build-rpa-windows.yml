@@ -1,0 +1,71 @@
+name: Build PCA RPA (Windows)
+
+on:
+  push:
+    paths:
+      - "rpa/**"
+      - ".github/workflows/build-rpa-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: rpa
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build exe
+        run: pyinstaller --noconfirm --clean --onefile --console --name PCA_RPA pca_rpa.py
+
+      - name: Smoke test
+        run: |
+          New-Item -ItemType Directory -Force smoke | Out-Null
+          Copy-Item dist\PCA_RPA.exe smoke\
+          Copy-Item config.ini smoke\
+          (Get-Content smoke\config.ini) -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content smoke\config.ini
+          New-Item -ItemType Directory -Force smoke\input | Out-Null
+          Copy-Item ornek_veri\data2.txt smoke\input\
+          smoke\PCA_RPA.exe --once
+          if ($LASTEXITCODE -ne 0) { throw "Smoke test failed" }
+          $x = Get-ChildItem smoke\output -Recurse -Filter *.xlsx
+          if (-not $x) { throw "No Excel output" }
+          Get-ChildItem smoke -Recurse | Select-Object FullName
+
+      - name: Assemble package
+        run: |
+          $p = "paket"
+          foreach ($d in "input","output","archive","error","logs","ornek_veri") { New-Item -ItemType Directory -Force "$p\$d" | Out-Null }
+          foreach ($d in "input","output","archive","error","logs") { New-Item -ItemType File -Force "$p\$d\.gitkeep" | Out-Null }
+          Copy-Item dist\PCA_RPA.exe, config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat $p\
+          Copy-Item ornek_veri\* "$p\ornek_veri\"
+          Compress-Archive -Path "$p\*" -DestinationPath PCA_RPA_Windows.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PCA_RPA_Windows
+          path: rpa/paket/
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rpa-v1.0.0-${{ github.run_number }}
+          name: PCA RPA Windows (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          files: rpa/PCA_RPA_Windows.zip
+          body: |
+            PCA RPA botu – Windows paketi. `PCA_RPA_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
