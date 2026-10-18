@@ -117,7 +117,10 @@ def kontrol(ayarlar):
     else:
         print("  [--] RPA.Windows yalnızca Windows'ta")
     puantaj = ayarlar.yol("ISE_GIRIS", "puantaj")
-    satir(os.path.isfile(puantaj), "Puantaj dosyası", puantaj)
+    if os.path.isfile(puantaj):
+        satir(True, "Puantaj dosyası", puantaj)
+    else:  # kurulum hatası değil; dosya işe giriş öncesi konur
+        print(f"  [--] Puantaj dosyası henüz yok - {puantaj}")
     llm = ayarlar.getbool("LLM", "aktif")
     anahtar = bool(ayarlar.get("LLM", "api_anahtari") or os.environ.get("ANTHROPIC_API_KEY"))
     print(f"  [--] LLM katmanı: {'AÇIK' if llm else 'kapalı'}" + (f", API anahtarı {'var' if anahtar else 'YOK'}" if llm else ""))
