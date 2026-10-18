@@ -11,7 +11,9 @@ Altı katmanlı bir robot. Hepsi tek pakette ve `RPA_Bot.exe` üzerinden çalı�
 | Veri & çıktı | **openpyxl · re** | Puantaj Excel'ini okur, TC ile eşleştirir, girişe hazır Excel yazar |
 | Ajan katmanı (opsiyonel) | **anthropic · MCP** | OCR'ın okuyamadığı alanları Claude'a sordurur; robotu Claude Desktop'a araç olarak açar |
 
-Ayrıca ilk sürümdeki **PCA analizi** de aynen duruyor.
+Ayrıca ilk sürümdeki **PCA analizi** de aynen duruyor. Birden fazla robot makinesi varsa **Kontrol Merkezi**
+(web paneli, kuyruklar, zamanlamalar, şifreli kasa, bildirimler) bir makinede çalışır, robotlar oradan iş alır — bkz. bölüm 6.
+Hiçbir parçası Claude'a, internete ya da başka bir lisansa bağlı değildir.
 
 ---
 
@@ -29,6 +31,8 @@ Ayrıca ilk sürümdeki **PCA analizi** de aynen duruyor.
   6. Örnek: Not Defteri otomasyonu
   7. Örnek: Tarayıcı formu doldurma
   8. Kurulum kontrolü
+  9. Kontrol Merkezi'ni başlat (sunucu makinesi)
+ 10. Robot ajanını başlat (robot makinesi)
 ```
 
 3. İlk iş olarak **8 – Kurulum kontrolü**'nü çalıştırın. Tesseract, Türkçe dil paketi ve kütüphaneler `[OK]` görünmeli.
@@ -49,6 +53,8 @@ RPA_Bot.exe pca --once | --watch | --file D:\veri.txt PCA analizi
 RPA_Bot.exe robot <görev> [Robot seçenekleri]         ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir
 RPA_Bot.exe gorevler                                  görev listesi
 RPA_Bot.exe mcp                                       MCP sunucusu (Claude Desktop için)
+RPA_Bot.exe merkez | ajan                             Kontrol Merkezi / robot ajanı (bölüm 6)
+RPA_Bot.exe kuyruk ise-giris-dagit | ise-giris-isle   merkez kuyruğuyla işe giriş
 --config D:\baska.ini                                 farklı ayar dosyası
 ```
 
@@ -151,7 +157,98 @@ Claude'un kullanabileceği araçlar: `ocr_pdf`, `belge_analizi`, `ise_giris_hazi
 `pca_analizi`, `gorev_listesi`, `robot_gorevi_calistir` (Mikro görevleri varsayılan olarak kuru çalışır).
 Araç sonuçları (OCR metni dahil) Claude'a gider; KVKK uyarısı burada da geçerlidir.
 
-## 6) PCA analizi
+## 6) Kontrol Merkezi ve robot ajanları (çok makineli çalışma)
+
+Tek paket iki rolde çalışır. Rolü config.ini ve çalıştırılan komut belirler:
+
+```
+                     ┌──────────────── Kontrol Merkezi (1 makine) ─────────────────┐
+  Tarayıcı (HR, BT) ─┤  RPA_Bot.exe merkez   →  http://SUNUCU:8765                  │
+                     │  web paneli · iş kuyruğu · iş öğesi kuyrukları · zamanlamalar │
+                     │  şifreli varlık kasası · loglar/raporlar · bildirimler        │
+                     └──────────────▲───────────────────────────▲──────────────────┘
+                                    │ HTTP(S), robot anahtarı   │
+                     ┌──────────────┴─────────┐    ┌────────────┴───────────┐
+                     │ Robot makinesi 1       │    │ Robot makinesi 2       │
+                     │ RPA_Bot.exe ajan       │    │ RPA_Bot.exe ajan       │
+                     └──────────┬─────────────┘    └────────────┬───────────┘
+                                └──── ortak ağ klasörü (\\sunucu\ik\ise_giris) ┘
+```
+
+### Kurulum
+
+**Merkez makinesi** (7/24 açık bir sunucu ya da bilgisayar):
+1. Zip'i çıkarın (ör. `C:\RPA_Bot`).
+2. `merkez_kur.bat` dosyasını **Yönetici olarak** çalıştırın. Bu betik merkezi Windows açılışında başlatan görevi kurar, güvenlik duvarında 8765 portunu açar ve merkezi başlatır.
+3. İlk yönetici parolası `merkez_veri\ilk_yonetici_parolasi.txt` dosyasındadır. `http://SUNUCU:8765` adresinden giriş yapın, sonra **Kullanıcılar** sayfasından parolanızı değiştirin ve bu dosyayı silin.
+4. **Robotlar → Robot ekle** ile her robot makinesi için bir robot oluşturun. Ekranda bir kez gösterilen anahtarı not edin.
+5. (Önerilir) HTTPS için `[MERKEZ] ssl_sertifika` / `ssl_anahtar` ayarlarına kurumsal sertifikanızı verin.
+   Bildirim e-postalarındaki bağlantılar için `panel_url` ayarını doldurun.
+
+**Robot makinesi:**
+1. Zip'i çıkarın.
+2. `config.ini` dosyasının `[AJAN]` bölümüne `merkez_url`, `robot_adi`, `robot_anahtari` yazın.
+3. Çok robotlu işe giriş için `[ISE_GIRIS]` ayarlarındaki `giris`, `puantaj`, `cikti` ile `[KLASORLER]` ayarlarındaki `arsiv`, `hata` değerlerini **ortak ağ klasörüne** yönlendirin (ör. `\\sunucu\ik\ise_giris`).
+4. Robotun çalışacağı Windows kullanıcısıyla oturum açıp `ajan_kur.bat` dosyasını çalıştırın. Ajan her oturum açılışında başlar.
+   Masaüstü otomasyonu (Mikro, Not Defteri) yalnızca **açık bir kullanıcı oturumunda** çalışır. Gözetimsiz robotlarda Windows otomatik oturum açmayı kullanın ve ekran kilidini kapatın.
+5. Panelde robot birkaç saniye içinde **Boşta** görünür.
+
+Kurulumu betikle yapmak isterseniz, merkez makinesinde şu komutları kullanabilirsiniz:
+`RPA_Bot.exe merkez-robot ROBOT-1` (anahtarı yazar), `RPA_Bot.exe merkez-is pca --robot ROBOT-1 --bekle 30`
+(işi başlatır, bitmesini bekler; çıkış kodu 0 = başarılı), `RPA_Bot.exe merkez-parola admin` (parola sıfırlar).
+
+### Panel
+
+| Sayfa | Ne yapılır |
+|---|---|
+| **Pano** | Çevrimiçi robotlar, çalışan/bekleyen işler, bugünkü başarı/başarısızlık, kuyruk durumu (15 sn'de bir yenilenir) |
+| **İşler** | Süreç ve robot seçerek iş başlatma, öncelik, deneme hakkı, zaman aşımı, Robot değişkenleri. İş detayında canlı log, Robot `log.html` raporu, iptal ve yeniden çalıştırma |
+| **Kuyruklar** | İş öğeleri (ör. her personel PDF'i bir öğe): durum, deneme, hangi robot, sonuç, hata türü; tek tıkla yeniden işleme |
+| **Zamanlamalar** | Cron ile zamanlanmış işler (ör. `*/15 8-18 * * 1-5`); durdurma/başlatma, "şimdi çalıştır". Önceki çalışma bitmeden yenisi başlamaz |
+| **Robotlar** | Robot ekleme/pasifleştirme, anahtar yenileme, son görülme, makine, sürüm |
+| **Varlıklar** | Şifreli kasa: Mikro kullanıcı/parolası, SMTP parolası, Teams webhook URL'si… |
+| **Kullanıcılar** | Roller: **izleyici** (yalnızca görür), **operator** (iş başlatır/iptal eder, öğe yeniden işler), **yonetici** (her şey) |
+| **Denetim** | Kim, ne zaman, ne yaptı: girişler, iş başlatma/iptal, varlık okuma, robot ve kullanıcı değişiklikleri |
+
+### Çok robotlu işe giriş (kuyruk)
+
+1. **İşe giriş — PDF'leri kuyruğa ekle (dağıtıcı):** Ortak klasördeki her PDF için `ise_giris` kuyruğuna bir öğe ekler.
+   Aynı dosya iki kez eklenmez; dosya değişirse yeni öğe olarak eklenir.
+2. **İşe giriş — kuyruktan al ve işle (çalışan):** Bu işi birden fazla robota verebilirsiniz. Her öğeyi yalnızca bir robot alır; kuyruk boşalınca iş biter.
+3. Hatalar ikiye ayrılır:
+   - **İş kuralı hatası** (TC Puantaj'da yok, PDF yanlış): yeniden denenmez, PDF `error\ise_giris` klasörüne gider, bildirim gönderilir.
+   - **Sistem hatası** (ağ, dosya kilidi, çökme): deneme hakkı kadar (varsayılan 3) otomatik yeniden denenir.
+
+Tipik zamanlama: `*/10 8-18 * * 1-5` ile dağıtıcı, `*/10 8-18 * * 1-5` ile her robotta çalışan.
+
+### Güvenilirlik
+
+- Bir robot 90 sn nabız göndermezse **çevrimdışı** sayılır ve bildirim gider; geri gelince "yeniden çevrimiçi" bildirimi gider.
+- Robotu kaybolan **çalışan iş** 5 dk sonra başarısız sayılır, deneme hakkı varsa başka robotta yeniden çalışır.
+  Yarım kalan kuyruk öğeleri yeniden kuyruğa alınır.
+- Başarısız işler 1, 2, 4… dk aralıklarla yeniden denenir (iş başlatırken verilen deneme hakkı kadar).
+- Merkeze geçici olarak ulaşılamazsa ajan, iş sonucunu kaybetmeden ulaşana kadar tekrar dener.
+- Ajan yalnızca katalogdaki süreçleri çalıştırır (PCA, işe giriş, `gorevler\*.robot`). Merkezden keyfi komut çalıştırılamaz.
+
+### Bildirimler (`[BILDIRIM]`)
+
+- **E-posta:** `eposta = evet` yapın. `[EMAIL]` bölümündeki SMTP ayarları kullanılır; parolayı `sifre = varlik:SMTP` biçiminde kasadan okutabilirsiniz.
+- **Teams:** Kanalda **Workflows → "Post to a channel when a webhook request is received"** ile bir URL alın ve `teams_webhook` ayarına yazın (ya da `varlik:TEAMS_WEBHOOK`).
+- Hangi olaylarda bildirim gideceği: `olaylar = is_basarisiz, robot_cevrimdisi, robot_cevrimici, oge_basarisiz` (`is_basarili` da eklenebilir).
+- Panel her durumda güncel durumu gösterir.
+
+### Yedekleme
+
+`merkez_veri\` klasörünün tamamını düzenli yedekleyin: veritabanı, `kasa.key` ve raporlar.
+**`kasa.key` kaybolursa kasadaki parolalar çözülemez.** Bu klasöre yalnızca yöneticiler erişebilmelidir.
+
+### UiPath Orchestrator'a göre eksikler
+
+- Görsel süreç tasarımcısı ve kaydedici yok; süreçler `.robot` / Python ile yazılır.
+- Gözetimsiz robot için Windows oturumu kendiliğinden açılmaz. Otomatik oturum açma gerekir ya da robot için ayrılmış bir makine kullanılır.
+- Yüksek erişilebilirlik (çift merkez), Active Directory ile giriş ve Citrix/RDP için görüntü tabanlı otomasyon yok.
+
+## 7) PCA analizi
 
 `input\` klasörüne `.txt` / `.csv` / `.xlsx` veri dosyası bırakın, sonra `RPA_Bot.exe pca --once` çalıştırın.
 Ayarlar `[VERI]`, `[PCA]`, `[GRAFIK]`, `[CIKTI]`, `[EMAIL]` bölümlerindedir. Çıktı `output\<dosya>_<tarih>\` klasörüne yazılır.

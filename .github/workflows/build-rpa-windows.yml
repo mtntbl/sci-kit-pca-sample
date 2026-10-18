@@ -56,7 +56,7 @@ jobs:
             New-Item -ItemType Directory -Force "$p\$d" | Out-Null
             New-Item -ItemType File -Force "$p\$d\.gitkeep" | Out-Null
           }
-          Copy-Item config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat $p\
+          Copy-Item config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat, merkez_kur.bat, ajan_kur.bat, merkez_ajan_kaldir.bat $p\
           Copy-Item -Recurse gorevler $p\gorevler
           Copy-Item -Recurse ornek_veri $p\ornek_veri
           # Tesseract (taşınabilir): yalnızca çalışma için gerekli dosyalar
@@ -102,6 +102,53 @@ jobs:
           .\RPA_Bot.exe robot ornek_tarayici
           if ($LASTEXITCODE -ne 0) { throw "browser robot failed" }
 
+      - name: Smoke test - Kontrol Merkezi + robot ajanı (iki ayrı kurulum)
+        run: |
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Tesseract' }) -join ';'
+          Expand-Archive RPA_Bot_Windows.zip -DestinationPath merkez -Force
+          Expand-Archive RPA_Bot_Windows.zip -DestinationPath robot1 -Force
+          $m = (Resolve-Path merkez\config.ini).Path
+          $r = (Resolve-Path robot1\config.ini).Path
+          (Get-Content $m) -replace '^port = .*', 'port = 18765' | Set-Content -Encoding utf8 $m
+          $sifre = ((& merkez\RPA_Bot.exe --config $m merkez-parola admin) -split ': ')[-1].Trim()
+          $srv = Start-Process merkez\RPA_Bot.exe -ArgumentList "--config", "`"$m`"", "merkez" -PassThru `
+                   -WorkingDirectory merkez -RedirectStandardOutput merkez.out -RedirectStandardError merkez.err
+          $ok = $false
+          foreach ($i in 1..60) { try { Invoke-RestMethod http://127.0.0.1:18765/api/saglik | Out-Null; $ok = $true; break } catch { Start-Sleep 1 } }
+          if (-not $ok) { Get-Content merkez.out, merkez.err; throw "Kontrol Merkezi başlamadı" }
+          # panel girişi
+          $s = $null
+          Invoke-WebRequest http://127.0.0.1:18765/giris -Method Post -Body @{ad = "admin"; sifre = $sifre} -SessionVariable s -MaximumRedirection 5 | Out-Null
+          $pano = Invoke-WebRequest http://127.0.0.1:18765/ -WebSession $s
+          if ($pano.Content -notmatch 'Pano') { throw "Panel girişi başarısız" }
+          # robot kaydı + ajan
+          $key = ((& merkez\RPA_Bot.exe --config $m merkez-robot CI-ROBOT) | Select-String 'robot_anahtari = (.+)').Matches[0].Groups[1].Value
+          (Get-Content $r) -replace '^merkez_url =.*', 'merkez_url = http://127.0.0.1:18765' `
+                           -replace '^robot_adi =.*', 'robot_adi = CI-ROBOT' `
+                           -replace '^robot_anahtari =.*', "robot_anahtari = $key" `
+                           -replace '^nabiz_sn = .*', 'nabiz_sn = 5' `
+                           -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content -Encoding utf8 $r
+          Copy-Item robot1\ornek_veri\data2.txt robot1\input\
+          Copy-Item robot1\ornek_veri\ise_giris\* robot1\input\ise_giris\
+          $ajan = Start-Process robot1\RPA_Bot.exe -ArgumentList "--config", "`"$r`"", "ajan" -PassThru `
+                    -WorkingDirectory robot1 -RedirectStandardOutput ajan.out -RedirectStandardError ajan.err
+          function Is([string[]]$a) { & merkez\RPA_Bot.exe --config $m merkez-is @a; if ($LASTEXITCODE -ne 0) { Get-Content ajan.out -Tail 40; throw "merkez-is $a failed" } }
+          try {
+            Is pca, --robot, CI-ROBOT, --bekle, 5
+            Is ise-giris-dagit, --bekle, 5
+            Is ise-giris-isle, --bekle, 10
+            Is robot:mikro_personel_giris, --degisken, KURU_CALISMA:evet, --bekle, 5
+            Is robot:ornek_masaustu_notepad, --bekle, 5
+            $k = Invoke-WebRequest http://127.0.0.1:18765/kuyruklar/ise_giris -WebSession $s
+            if (([regex]::Matches($k.Content, 'r-basarili')).Count -lt 2) { throw "Kuyruk öğeleri başarılı değil" }
+            $isler = Invoke-WebRequest http://127.0.0.1:18765/isler -WebSession $s
+            "Panelde $(([regex]::Matches($isler.Content, 'r-basarili')).Count) başarılı iş"
+          } finally {
+            Stop-Process -Id $ajan.Id -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
+            Get-Content ajan.out -Tail 15
+          }
+
       - name: Upload smoke-test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -116,11 +163,11 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rpa-v2.0.0-${{ github.run_number }}
-          name: RPA Bot Windows v2.0.0 (build ${{ github.run_number }})
+          tag_name: rpa-v3.0.0-${{ github.run_number }}
+          name: RPA Bot Windows v3.0.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           files: rpa/RPA_Bot_Windows.zip
           body: |
-            RPA Bot – Windows paketi (PCA + OCR + işe giriş + Robot Framework + MCP).
+            RPA Bot – Windows paketi (Kontrol Merkezi + robot ajanı + PCA + OCR + işe giriş + Robot Framework + MCP).
             `RPA_Bot_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
             Tesseract OCR (Türkçe dil paketiyle) paketin içindedir; ayrıca kurulum gerekmez.

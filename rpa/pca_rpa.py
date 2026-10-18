@@ -46,6 +46,9 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler  # noqa: E402
 VERSION = "1.0.0"
 log = logging.getLogger("pca_rpa")
 
+# config.ini'de "varlik:AD" / "varlik:AD.kullanici" değerleri bu fonksiyonla çözülür (merkez ya da ajan ayarlar)
+VARLIK_COZUCU = None
+
 DEFAULT_CONFIG = """\
 ; =====================================================================
 ;  PCA RPA Botu - Konfigürasyon
@@ -165,7 +168,13 @@ class Settings:
         self.cp = cp
 
     def get(self, sec, key):
-        return self.cp.get(sec, key, fallback="").strip()
+        deger = self.cp.get(sec, key, fallback="").strip()
+        if deger.lower().startswith("varlik:"):
+            ad, _, alan = deger[7:].strip().partition(".")
+            if VARLIK_COZUCU is None:
+                raise RuntimeError(f"[{sec}] {key} = {deger}: varlıklar yalnızca Kontrol Merkezi'ne bağlıyken çözülebilir")
+            return VARLIK_COZUCU(ad, alan)
+        return deger
 
     def getbool(self, sec, key):
         v = self.get(sec, key).lower()

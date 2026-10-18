@@ -170,6 +170,38 @@ class RpaBotKeywords:
         logger.info(f"{len(sonuc)} alan girilecek ({os.path.basename(xlsx)})", also_console=True)
         return sonuc
 
+    # ------------------------------------------------------------------ Kontrol Merkezi
+    def _merkez(self):
+        from merkez_istemci import MerkezIstemci
+
+        if not hasattr(self, "_istemci"):
+            self._istemci = MerkezIstemci.ayarlardan(self.ayarlar)
+        return self._istemci
+
+    @keyword("Varlık Al")
+    def varlik_al(self, ad, alan="deger"):
+        """Merkezin şifreli kasasından varlık okur. ``alan``: deger | kullanici_adi.
+        Örnek: ``${parola}=  Varlık Al  MIKRO_GIRIS`` / ``${kul}=  Varlık Al  MIKRO_GIRIS  kullanici_adi``"""
+        v = self._merkez().varlik(ad)
+        logger.info(f"Varlık okundu: {ad}")
+        return v[alan]
+
+    @keyword("Kuyruğa Ekle")
+    def kuyruga_ekle(self, kuyruk, referans, veri=None, oncelik=5, max_deneme=3):
+        r = self._merkez().kuyruga_ekle(kuyruk, referans, veri or {}, oncelik=int(oncelik), max_deneme=int(max_deneme))
+        return bool(r and r.get("eklendi"))
+
+    @keyword("Kuyruktan Öğe Al")
+    def kuyruktan_oge_al(self, kuyruk):
+        """Sıradaki öğeyi alır; kuyruk boşsa ``None`` döner. Öğe: id, referans, veri, deneme, son_deneme."""
+        return self._merkez().kuyruktan_al(kuyruk)
+
+    @keyword("Öğeyi Bitir")
+    def ogeyi_bitir(self, oge, durum="basarili", hata="", sonuc=None):
+        """durum: basarili | is_hatasi | sistem_hatasi"""
+        oge_id = oge["id"] if isinstance(oge, dict) else int(oge)
+        return self._merkez().oge_bitir(oge_id, durum, sonuc or {}, str(hata))
+
     @keyword("Hazır Veriyi Yükle")
     def hazir_veriyi_yukle(self, json_yolu):
         with open(json_yolu, encoding="utf-8") as f:

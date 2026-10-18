@@ -67,6 +67,57 @@ gorev_klasoru = gorevler
 cikti = logs\\robot
 ; Mikro giriş robotunda gerçek tuş/tıklama yerine yalnızca log yaz (güvenli deneme)
 kuru_calisma = evet
+
+; =====================================================================
+;  KONTROL MERKEZİ (yalnızca merkez makinesinde: RPA_Bot.exe merkez)
+;  Herhangi bir değer yerine varlik:AD (parola) ya da varlik:AD.kullanici yazılabilir;
+;  değer merkezin şifreli kasasından okunur.
+; =====================================================================
+
+[MERKEZ]
+; Veritabanı, kasa anahtarı ve robot raporları burada tutulur — YEDEKLEYİN
+veri_klasoru = merkez_veri
+adres = 0.0.0.0
+port = 8765
+; Bildirimlerdeki bağlantılar için panelin adresi (ör. https://rpa-sunucu:8765)
+panel_url =
+; HTTPS için PEM sertifika ve anahtar dosyaları (önerilir)
+ssl_sertifika =
+ssl_anahtar =
+; Bu kadar saniye nabız gelmeyen robot çevrimdışı sayılır
+cevrimdisi_esik_sn = 90
+; Robotu bu kadar saniye sessiz kalan 'çalışıyor' iş başarısız sayılır (deneme hakkı varsa yeniden kuyruğa alınır)
+sahipsiz_is_esik_sn = 300
+; Biten iş, kuyruk öğesi ve denetim kayıtları kaç gün saklansın
+saklama_gun = 90
+
+[BILDIRIM]
+; Bildirim gönderilecek olaylar (virgülle):
+;   is_basarisiz, is_basarili, robot_cevrimdisi, robot_cevrimici, oge_basarisiz
+olaylar = is_basarisiz, robot_cevrimdisi, robot_cevrimici, oge_basarisiz
+; E-posta: [EMAIL] bölümündeki SMTP ayarları kullanılır
+eposta = hayir
+; Boşsa [EMAIL] alicilar kullanılır
+eposta_alicilar =
+; Teams: kanal > Workflows > "Post to a channel when a webhook request is received" ile alınan URL
+; (URL'yi varlık olarak saklamak için: teams_webhook = varlik:TEAMS_WEBHOOK)
+teams_webhook =
+
+; =====================================================================
+;  ROBOT AJANI (robot makinelerinde: RPA_Bot.exe ajan)
+; =====================================================================
+
+[AJAN]
+; Kontrol Merkezi adresi, ör. http://rpa-sunucu:8765
+merkez_url =
+; Panelde Robotlar > Robot ekle ile alınan ad ve anahtar
+robot_adi =
+; Anahtarı dosyaya yazmak istemezseniz RPA_ROBOT_ANAHTARI ortam değişkenini kullanın
+robot_anahtari =
+nabiz_sn = 15
+; Merkez kendinden imzalı sertifika kullanıyorsa: ca_dosyasi = C:\\RPA_Bot\\merkez.crt
+ca_dosyasi =
+ssl_dogrula = evet
 """
 
 TAM_CONFIG = pca_rpa.DEFAULT_CONFIG + EK_CONFIG

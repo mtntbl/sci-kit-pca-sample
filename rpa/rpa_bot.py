@@ -11,6 +11,13 @@ RPA Bot — tek giriş noktası (RPA_Bot.exe)
   RPA_Bot.exe gorevler                görev listesini yazar
   RPA_Bot.exe kontrol                 kurulum kontrolü (Tesseract, dil paketleri, kütüphaneler)
   RPA_Bot.exe mcp                     MCP sunucusu (Claude Desktop vb. için)
+  RPA_Bot.exe merkez                  Kontrol Merkezi (web paneli + robot API'si)
+  RPA_Bot.exe merkez-parola admin     panel kullanıcısının parolasını sıfırlar
+  RPA_Bot.exe merkez-robot ROBOT-1    robot ekler / anahtarını yeniler (merkez makinesinde)
+  RPA_Bot.exe merkez-is pca [--robot R] [--degisken AD:deger] [--bekle 30]   iş başlatır
+  RPA_Bot.exe ajan                    robot ajanı (merkezden iş alır)
+  RPA_Bot.exe kuyruk ise-giris-dagit  PDF'leri merkez kuyruğuna ekler
+  RPA_Bot.exe kuyruk ise-giris-isle   merkez kuyruğundan alıp işler
   RPA_Bot.exe init                    eksik config.ini ve klasörleri oluşturur
 Ortak seçenek: --config C:\\yol\\config.ini
 """
@@ -25,7 +32,7 @@ import sys
 import ayarlar as ay
 import pca_rpa
 
-VERSION = "2.0.0"
+VERSION = "3.0.0"
 log = logging.getLogger("pca_rpa")
 
 
@@ -161,6 +168,8 @@ def menu(config_yolu):
         ("Örnek: Not Defteri otomasyonu", ["robot", "ornek_masaustu_notepad"]),
         ("Örnek: Tarayıcı formu doldurma", ["robot", "ornek_tarayici"]),
         ("Kurulum kontrolü", ["kontrol"]),
+        ("Kontrol Merkezi'ni başlat (sunucu makinesi)", ["merkez"]),
+        ("Robot ajanını başlat (robot makinesi)", ["ajan"]),
     ]
     print(f"\n  RPA Bot v{VERSION}\n")
     for i, (ad, _) in enumerate(secenekler, 1):
@@ -199,6 +208,20 @@ def main(argv=None):
     alt.add_parser("gorevler")
     alt.add_parser("kontrol")
     alt.add_parser("mcp")
+    alt.add_parser("merkez")
+    p = alt.add_parser("merkez-parola")
+    p.add_argument("kullanici")
+    p = alt.add_parser("merkez-robot")
+    p.add_argument("robot")
+    p = alt.add_parser("merkez-is")
+    p.add_argument("surec")
+    p.add_argument("--robot", default="")
+    p.add_argument("--degisken", action="append", default=[])
+    p.add_argument("--deneme", type=int, default=1)
+    p.add_argument("--bekle", type=float, default=0, help="dakika; iş bitene kadar bekler")
+    alt.add_parser("ajan")
+    p = alt.add_parser("kuyruk")
+    p.add_argument("islem", choices=["ise-giris-dagit", "ise-giris-isle"])
     alt.add_parser("init")
 
     # robot alt komutundan sonraki her şey Robot'a aynen geçer
@@ -230,6 +253,38 @@ def main(argv=None):
         return 0
 
     pca_rpa.setup_logging(ayarlar)
+    if args.komut == "merkez":
+        import merkez_sunucu
+
+        merkez_sunucu.calistir(ayarlar)
+        return 0
+    if args.komut == "merkez-parola":
+        import merkez_sunucu
+
+        print(f"{args.kullanici} için yeni parola: {merkez_sunucu.sifre_sifirla(ayarlar, args.kullanici)}")
+        return 0
+    if args.komut == "merkez-robot":
+        import merkez_sunucu
+
+        print(f"[AJAN]\nrobot_adi = {args.robot}\nrobot_anahtari = {merkez_sunucu.robot_olustur(ayarlar, args.robot)}")
+        return 0
+    if args.komut == "merkez-is":
+        import merkez_sunucu
+
+        return merkez_sunucu.is_olustur(ayarlar, args.surec, args.robot, args.degisken, args.deneme, args.bekle)
+    if args.komut == "ajan":
+        import ajan
+
+        return ajan.calistir(ayarlar, VERSION)
+    # Ajanın başlattığı işler (ya da [AJAN] ayarlı makine): config'teki varlik:AD değerleri merkezden çözülür
+    if os.environ.get("RPA_MERKEZ_URL") or ayarlar.cp.get("AJAN", "merkez_url", fallback="").strip():
+        import merkez_istemci
+
+        merkez_istemci.varlik_cozucu_kur(ayarlar)
+    if args.komut == "kuyruk":
+        import kuyruk_isleri
+
+        return kuyruk_isleri.dagit(ayarlar) if args.islem == "ise-giris-dagit" else kuyruk_isleri.isle(ayarlar)
     if args.komut == "pca":
         a = ["--config", args.config] + (["--once"] if args.once else ["--watch"] if args.watch else []) + \
             (["--file", args.file] if args.file else [])

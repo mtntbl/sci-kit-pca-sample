@@ -64,6 +64,9 @@ def tc_bul(metin):
 # --------------------------------------------------------------------------- OCR motoru
 class OcrMotoru:
     def __init__(self, ayarlar):
+        # Tesseract OpenMP ile tüm çekirdekleri kullanır; aynı anda birden fazla OCR (çok robot, çok iş)
+        # çalışınca çekirdekler boğulur ve süre 10 katına çıkar. Tek iş parçacığı bu görsellerde daha hızlıdır.
+        os.environ.setdefault("OMP_THREAD_LIMIT", "1")
         self.ayarlar = ayarlar
         self.dil = ayarlar.get("OCR", "dil") or "tur"
         self.dpi = ayarlar.getint("OCR", "dpi")
