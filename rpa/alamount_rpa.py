@@ -199,8 +199,8 @@ def menu(config_yolu):
     print(AFIS)
     print(f"  {marka.URUN} v{VERSION} · {marka.SIRKET}\n  " + "─" * 46 + "\n")
     for i, (ad, _) in enumerate(secenekler, 1):
-        print(f"  {i}. {ad}")
-    print("  0. Çıkış\n")
+        print(f"  {i:>2}. {ad}")
+    print("   0. Çıkış\n")
     try:
         sec = input("  Seçiminiz: ").strip()
     except EOFError:
