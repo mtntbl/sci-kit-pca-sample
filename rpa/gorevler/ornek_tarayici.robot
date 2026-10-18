@@ -4,7 +4,7 @@ Documentation     RPA.Browser.Selenium ile tarayıcı otomasyonu örneği:
 ...               verisiyle doldurur, ekran görüntüsü alır ve gönderir.
 ...               Gerçek bir web uygulaması için URL ve locator'ları değiştirin.
 Library           RPA.Browser.Selenium    auto_close=${TRUE}
-Library           RpaBotKeywords
+Library           AlamountRPA
 Library           OperatingSystem
 
 *** Variables ***

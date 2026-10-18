@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Robot Framework anahtar kelime kütüphanesi.
-.robot görevlerinde:   Library    RpaBotKeywords
+.robot görevlerinde:   Library    AlamountRPA
 Bot katmanlarını (PCA, OCR, işe giriş) Robot görevlerinden çağrılabilir hale getirir.
 """
 
@@ -17,7 +17,7 @@ from openpyxl import load_workbook
 import ayarlar as ay
 import belge_ocr as bo
 import ise_giris
-import pca_rpa
+import pca_analiz
 
 
 class _RobotLogHandler(logging.Handler):
@@ -30,11 +30,11 @@ class _RobotLogHandler(logging.Handler):
 
 
 @library(scope="GLOBAL", auto_keywords=False)
-class RpaBotKeywords:
+class AlamountRPA:
     def __init__(self, config=None):
-        self.config = config or os.environ.get("RPA_BOT_CONFIG") or ay.varsayilan_config_yolu()
+        self.config = config or os.environ.get("ALAMOUNT_RPA_CONFIG") or ay.varsayilan_config_yolu()
         self.ayarlar = ay.ayarlari_yukle(self.config)
-        log = logging.getLogger("pca_rpa")
+        log = logging.getLogger("alamount")
         if not any(isinstance(h, _RobotLogHandler) for h in log.handlers):
             h = _RobotLogHandler()
             h.setFormatter(logging.Formatter("%(message)s"))
@@ -67,12 +67,12 @@ class RpaBotKeywords:
     @keyword("PCA Klasörünü İşle")
     def pca_klasorunu_isle(self):
         """input klasöründeki veri dosyalarına PCA uygular. Başarılı ve hatalı sayısını döner."""
-        ok, hata = pca_rpa.run_once(self.ayarlar)
+        ok, hata = pca_analiz.run_once(self.ayarlar)
         return [ok, hata]
 
     @keyword("PCA Dosyası İşle")
     def pca_dosyasi_isle(self, dosya):
-        return pca_rpa.process_file(os.path.abspath(dosya), self.ayarlar)
+        return pca_analiz.process_file(os.path.abspath(dosya), self.ayarlar)
 
     # ------------------------------------------------------------------ belge / OCR
     @keyword("PDF Metne Çevir")

@@ -16,9 +16,10 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 import belge_ocr as bo
+import marka
 from llm_katmani import LlmKatmani
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 
 OTO, HR, YOK, BOS, LLM = "Otomatik", "HR ONAYI GEREKLİ", "Bilgi Yok", "Kasıtlı Boş", "LLM - KONTROL EDİN"
 
@@ -319,8 +320,8 @@ def llm_ile_tamamla(alanlar, belge, ayarlar):
 
 # --------------------------------------------------------------------------- Excel çıktısı
 RENK = {
-    "baslik": PatternFill("solid", fgColor="1F4E78"),
-    "ekran": PatternFill("solid", fgColor="BDD7EE"),
+    "baslik": PatternFill("solid", fgColor="022351"),
+    "ekran": PatternFill("solid", fgColor="DDF4FD"),
     HR: PatternFill("solid", fgColor="FFF2CC"),
     YOK: PatternFill("solid", fgColor="D9D9D9"),
     BOS: PatternFill("solid", fgColor="EDEDED"),
@@ -335,9 +336,20 @@ def excel_yaz(yol, kisi, alanlar, belge):
     ince = Side(style="thin", color="BFBFBF")
     kenar = Border(left=ince, right=ince, top=ince, bottom=ince)
 
+    wb.properties.creator = marka.URUN
     ws.append([f"İşe Giriş - {kisi['ad_soyad']} ({kisi['tc']})"])
-    ws["A1"].font = Font(bold=True, size=14)
-    ws.append([f"Hazırlanma: {dt.datetime.now():%d.%m.%Y %H:%M}  |  Birim: {kisi.get('birim', '')}"])
+    ws["A1"].font = Font(bold=True, size=14, color="022351")
+    ws.append([f"Hazırlanma: {dt.datetime.now():%d.%m.%Y %H:%M}  |  Birim: {kisi.get('birim', '')}  |  {marka.URUN}"])
+    ws["A2"].font = Font(color="5F6B7A", size=9)
+    ws.row_dimensions[1].height = 30
+    try:  # sağ üst köşeye logo
+        from openpyxl.drawing.image import Image as XlResim
+
+        logo = XlResim(marka.kaynak("logo.png"))
+        logo.width, logo.height = 150, int(150 * logo.height / logo.width)
+        ws.add_image(logo, "E1")
+    except Exception as hata:
+        log.debug("Excel'e logo eklenemedi: %s", hata)
     ws.append([])
     ws.append(["No", "Alan Adı", "Değer", "Durum", "Not", "Kaynak"])
     for c in ws[4]:
@@ -350,7 +362,7 @@ def excel_yaz(yol, kisi, alanlar, belge):
             ws.append([EKRANLAR[ekran]])
             r = ws.max_row
             ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6)
-            ws.cell(r, 1).font = Font(bold=True, color="1F4E78")
+            ws.cell(r, 1).font = Font(bold=True, color="022351")
             for col in range(1, 7):
                 ws.cell(r, col).fill = RENK["ekran"]
         ws.append([a.no, a.ad, a.deger or "", a.durum, a.not_, a.kaynak])

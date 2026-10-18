@@ -2,12 +2,12 @@
 Documentation     RPA.Windows ile masaüstü otomasyonu örneği:
 ...               Not Defteri'ni açar, son hazırlanan işe giriş özetini yazar, dosyaya kaydeder ve kapatır.
 Library           RPA.Windows
-Library           RpaBotKeywords
+Library           AlamountRPA
 Library           OperatingSystem
 Library           Process
 
 *** Variables ***
-${METIN}          RPA Bot masaüstü testi
+${METIN}          Alamount RPA masaüstü testi
 
 *** Tasks ***
 Not Defteri Otomasyonu
@@ -25,7 +25,7 @@ Not Defteri Otomasyonu
     Wait Until Created    ${hedef}    timeout=20s
     Close Current Window
     ${icerik}=    Get File    ${hedef}
-    Should Contain    ${icerik}    RPA Bot
+    Should Contain    ${icerik}    Alamount RPA
     Log    Kaydedildi: ${hedef}    console=True
 
 *** Keywords ***

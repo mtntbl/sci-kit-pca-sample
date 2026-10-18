@@ -38,7 +38,7 @@ shutil.copy(os.path.join(SHARED, "ise_giris", "12345678028.pdf"), os.path.join(S
 TEST_GOREVLER = {
     "bekle_test": "*** Tasks ***\nUzun Gorev\n    Log    basladi    console=True\n    Sleep    120s\n",
     "hata_test": "*** Tasks ***\nHatali Gorev\n    Fail    bilerek hata\n",
-    "varlik_test": ("*** Settings ***\nLibrary    RpaBotKeywords\n*** Tasks ***\nVarlik Oku\n"
+    "varlik_test": ("*** Settings ***\nLibrary    AlamountRPA\n*** Tasks ***\nVarlik Oku\n"
                     "    ${p}=    Varlık Al    TEST_GIRIS\n    ${k}=    Varlık Al    TEST_GIRIS    kullanici_adi\n"
                     "    Should Be Equal    ${p}    Çok-Gizli-1\n    Should Be Equal    ${k}    mikro_user\n"
                     "    Log    varlik dogru    console=True\n"),
@@ -81,7 +81,7 @@ class Hook(http.server.BaseHTTPRequestHandler):
 threading.Thread(target=http.server.HTTPServer(("127.0.0.1", TEAMS_PORT), Hook).serve_forever, daemon=True).start()
 
 PY = sys.executable
-BOT = os.path.join(RPA, "rpa_bot.py")
+BOT = os.path.join(RPA, "alamount_rpa.py")
 LOGS = []
 
 
@@ -156,6 +156,7 @@ except urllib.error.HTTPError as e:
     SONUC["yanlış parola reddedildi"] = e.code == 401
 post("/giris", {"ad": "admin", "sifre": sifre}, False)
 SONUC["admin girişi"] = "Pano" in get("/")[1]
+SONUC["panelde Alamount RPA logosu"] = "/marka/logo.png" in get("/")[1] and op.open(URL + "/marka/logo.png").status == 200
 # CSRF koruması
 try:
     st, url, body = post("/isler/yeni", {"surec": "pca", "csrf": "sahte"}, False)
@@ -274,7 +275,8 @@ except urllib.error.HTTPError as e:
 SONUC["izleyici panoyu görüyor"] = get("/")[0] == 200
 
 time.sleep(3)
-olaylar = [m["attachments"][0]["content"]["body"][0]["text"] for m in TEAMS]
+olaylar = [m["attachments"][0]["content"]["body"][1]["text"] for m in TEAMS]
+SONUC["Teams kartında Alamount RPA başlığı"] = all(m["attachments"][0]["content"]["body"][0]["text"] == "ALAMOUNT RPA" for m in TEAMS)
 print("Teams bildirimleri:", olaylar)
 SONUC["Teams: iş başarısız"] = "İş başarısız" in olaylar
 SONUC["Teams: kuyruk öğesi başarısız"] = "Kuyruk öğesi başarısız" in olaylar

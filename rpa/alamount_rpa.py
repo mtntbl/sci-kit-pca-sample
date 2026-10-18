@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-RPA Bot — tek giriş noktası (RPA_Bot.exe)
+Alamount RPA — tek giriş noktası (AlamountRPA.exe)
 
-  RPA_Bot.exe                         etkileşimli menü
-  RPA_Bot.exe pca [--once|--watch|--file X]
-  RPA_Bot.exe ise-giris               input\\ise_giris klasörünü işler
-  RPA_Bot.exe ise-giris --tc 12345678901 --pdf X.pdf [--puantaj Y.xlsx]
-  RPA_Bot.exe ocr belge.pdf [--cikti metin.txt]
-  RPA_Bot.exe robot <görev> [robot seçenekleri]   (ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir)
-  RPA_Bot.exe gorevler                görev listesini yazar
-  RPA_Bot.exe kontrol                 kurulum kontrolü (Tesseract, dil paketleri, kütüphaneler)
-  RPA_Bot.exe mcp                     MCP sunucusu (Claude Desktop vb. için)
-  RPA_Bot.exe merkez                  Kontrol Merkezi (web paneli + robot API'si)
-  RPA_Bot.exe merkez-parola admin     panel kullanıcısının parolasını sıfırlar
-  RPA_Bot.exe merkez-robot ROBOT-1    robot ekler / anahtarını yeniler (merkez makinesinde)
-  RPA_Bot.exe merkez-is pca [--robot R] [--degisken AD:deger] [--bekle 30]   iş başlatır
-  RPA_Bot.exe ajan                    robot ajanı (merkezden iş alır)
-  RPA_Bot.exe kuyruk ise-giris-dagit  PDF'leri merkez kuyruğuna ekler
-  RPA_Bot.exe kuyruk ise-giris-isle   merkez kuyruğundan alıp işler
-  RPA_Bot.exe init                    eksik config.ini ve klasörleri oluşturur
+  AlamountRPA.exe                         etkileşimli menü
+  AlamountRPA.exe pca [--once|--watch|--file X]
+  AlamountRPA.exe ise-giris               input\\ise_giris klasörünü işler
+  AlamountRPA.exe ise-giris --tc 12345678901 --pdf X.pdf [--puantaj Y.xlsx]
+  AlamountRPA.exe ocr belge.pdf [--cikti metin.txt]
+  AlamountRPA.exe robot <görev> [robot seçenekleri]   (ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir)
+  AlamountRPA.exe gorevler                görev listesini yazar
+  AlamountRPA.exe kontrol                 kurulum kontrolü (Tesseract, dil paketleri, kütüphaneler)
+  AlamountRPA.exe mcp                     MCP sunucusu (Claude Desktop vb. için)
+  AlamountRPA.exe merkez                  Kontrol Merkezi (web paneli + robot API'si)
+  AlamountRPA.exe merkez-parola admin     panel kullanıcısının parolasını sıfırlar
+  AlamountRPA.exe merkez-robot ROBOT-1    robot ekler / anahtarını yeniler (merkez makinesinde)
+  AlamountRPA.exe merkez-is pca [--robot R] [--degisken AD:deger] [--bekle 30]   iş başlatır
+  AlamountRPA.exe ajan                    robot ajanı (merkezden iş alır)
+  AlamountRPA.exe kuyruk ise-giris-dagit  PDF'leri merkez kuyruğuna ekler
+  AlamountRPA.exe kuyruk ise-giris-isle   merkez kuyruğundan alıp işler
+  AlamountRPA.exe init                    eksik config.ini ve klasörleri oluşturur
 Ortak seçenek: --config C:\\yol\\config.ini
 """
 
@@ -30,10 +30,31 @@ import os
 import sys
 
 import ayarlar as ay
-import pca_rpa
+import pca_analiz
 
-VERSION = "3.0.0"
-log = logging.getLogger("pca_rpa")
+import marka
+from marka import SURUM as VERSION
+log = logging.getLogger("alamount")
+
+
+AFIS = r"""
+     _    _                                   _     ____  ____   _
+    / \  | | __ _ _ __ ___   ___  _   _ _ __ | |_  |  _ \|  _ \ / \
+   / _ \ | |/ _` | '_ ` _ \ / _ \| | | | '_ \| __| | |_) | |_) / _ \
+  / ___ \| | (_| | | | | | | (_) | |_| | | | | |_  |  _ <|  __/ ___ \
+ /_/   \_\_|\__,_|_| |_| |_|\___/ \__,_|_| |_|\__| |_| \_\_| /_/   \_\
+"""
+
+
+def _konsol_basligi(alt=""):
+    """Windows konsol penceresinin başlığını ayarlar."""
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            ctypes.windll.kernel32.SetConsoleTitleW(f"{marka.URUN}{' · ' + alt if alt else ''}")
+        except Exception:
+            pass
 
 
 def _konsol_utf8():
@@ -81,8 +102,11 @@ def robot_calistir(ayarlar, gorev, ek_argumanlar=()):
     yol = gorev_yolu(ayarlar, gorev)
     cikti = os.path.join(ayarlar.yol("ROBOT", "cikti", olustur=True),
                          f"{os.path.splitext(os.path.basename(yol))[0]}_{dt.datetime.now():%Y%m%d_%H%M%S}")
-    os.environ["RPA_BOT_CONFIG"] = ayarlar.path
-    args = ["--outputdir", cikti, "--pythonpath", os.path.dirname(yol), *ek_argumanlar, yol]
+    os.environ["ALAMOUNT_RPA_CONFIG"] = ayarlar.path
+    gorev_adi = os.path.splitext(os.path.basename(yol))[0]
+    args = ["--outputdir", cikti, "--pythonpath", os.path.dirname(yol),
+            "--logtitle", f"{marka.URUN} · {gorev_adi} · Log", "--reporttitle", f"{marka.URUN} · {gorev_adi} · Rapor",
+            *ek_argumanlar, yol]
     log.info("Robot görevi: %s → %s", os.path.basename(yol), cikti)
     kod = run_cli(args, exit=False)
     log.info("Robot görevi bitti (kod %s). Rapor: %s", kod, os.path.join(cikti, "log.html"))
@@ -98,7 +122,7 @@ def kontrol(ayarlar):
         sorun += 0 if ok else 1
         print(f"  [{'OK' if ok else '!!'}] {ad}{' - ' + detay if detay else ''}")
 
-    print(f"RPA Bot v{VERSION}  |  config: {ayarlar.path}")
+    print(f"Alamount RPA v{VERSION}  |  config: {ayarlar.path}")
     import belge_ocr as bo
 
     m = bo.OcrMotoru(ayarlar)
@@ -171,7 +195,9 @@ def menu(config_yolu):
         ("Kontrol Merkezi'ni başlat (sunucu makinesi)", ["merkez"]),
         ("Robot ajanını başlat (robot makinesi)", ["ajan"]),
     ]
-    print(f"\n  RPA Bot v{VERSION}\n")
+    _konsol_basligi("Menü")
+    print(AFIS)
+    print(f"  {marka.URUN} v{VERSION} · {marka.SIRKET}\n  " + "─" * 46 + "\n")
     for i, (ad, _) in enumerate(secenekler, 1):
         print(f"  {i}. {ad}")
     print("  0. Çıkış\n")
@@ -189,7 +215,7 @@ def menu(config_yolu):
 def main(argv=None):
     _konsol_utf8()
     argv = list(sys.argv[1:] if argv is None else argv)
-    ap = argparse.ArgumentParser(prog="RPA_Bot", description=f"RPA Bot v{VERSION}")
+    ap = argparse.ArgumentParser(prog="AlamountRPA", description=f"Alamount RPA v{VERSION}")
     ap.add_argument("--config", default=ay.varsayilan_config_yolu())
     alt = ap.add_subparsers(dest="komut")
     p = alt.add_parser("pca", help="PCA analizi")
@@ -235,6 +261,7 @@ def main(argv=None):
 
     if args.komut is None:
         return menu(args.config)
+    _konsol_basligi({"merkez": "Kontrol Merkezi", "ajan": "Robot Ajanı"}.get(args.komut, args.komut))
     if args.komut == "init":
         init(args.config)
         return 0
@@ -243,7 +270,7 @@ def main(argv=None):
     ayarlar = ay.ayarlari_yukle(args.config)
 
     if args.komut == "mcp":  # stdout MCP protokolüne ayrılmıştır; log yalnızca dosyaya
-        pca_rpa.setup_logging(ayarlar)
+        pca_analiz.setup_logging(ayarlar)
         for h in list(log.handlers):
             if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
                 log.removeHandler(h)
@@ -252,7 +279,7 @@ def main(argv=None):
         mcp_sunucu.calistir(args.config)
         return 0
 
-    pca_rpa.setup_logging(ayarlar)
+    pca_analiz.setup_logging(ayarlar)
     if args.komut == "merkez":
         import merkez_sunucu
 
@@ -277,7 +304,7 @@ def main(argv=None):
 
         return ajan.calistir(ayarlar, VERSION)
     # Ajanın başlattığı işler (ya da [AJAN] ayarlı makine): config'teki varlik:AD değerleri merkezden çözülür
-    if os.environ.get("RPA_MERKEZ_URL") or ayarlar.cp.get("AJAN", "merkez_url", fallback="").strip():
+    if os.environ.get("ALAMOUNT_MERKEZ_URL") or ayarlar.cp.get("AJAN", "merkez_url", fallback="").strip():
         import merkez_istemci
 
         merkez_istemci.varlik_cozucu_kur(ayarlar)
@@ -288,7 +315,7 @@ def main(argv=None):
     if args.komut == "pca":
         a = ["--config", args.config] + (["--once"] if args.once else ["--watch"] if args.watch else []) + \
             (["--file", args.file] if args.file else [])
-        return pca_rpa.main(a)
+        return pca_analiz.main(a)
     if args.komut == "ise-giris":
         return ise_giris_cli(ayarlar, args)
     if args.komut == "ocr":

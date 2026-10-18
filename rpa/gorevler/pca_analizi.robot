@@ -1,6 +1,6 @@
 *** Settings ***
 Documentation     input klasöründeki veri dosyalarına PCA analizi uygular (PCA_Example.ipynb).
-Library           RpaBotKeywords
+Library           AlamountRPA
 
 *** Tasks ***
 PCA Analizi

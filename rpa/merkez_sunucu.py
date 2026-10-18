@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-RPA Kontrol Merkezi — tek makinede çalışır, robotlar (ajanlar) buradan iş alır.
-  RPA_Bot.exe merkez
+Alamount RPA Kontrol Merkezi — tek makinede çalışır, robotlar (ajanlar) buradan iş alır.
+  AlamountRPA.exe merkez
 
   * Web paneli (rol bazlı): pano, işler, kuyruklar, zamanlamalar, robotlar, varlıklar, kullanıcılar, denetim
   * Robot API'si (/api/...): nabız, iş alma, log/rapor yükleme, kuyruk, varlık
@@ -26,15 +26,16 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Redire
 from starlette.routing import Route
 
 import ayarlar as ay
+import marka
 import merkez_panel as P
-import pca_rpa
+import pca_analiz
 import surecler
 from bildirim import Bildirici
 from cron import Cron, gecerli_mi
 from merkez_db import ROLLER, Veritabani
 
-log = logging.getLogger("pca_rpa")
-COOKIE = "rpa_oturum"
+log = logging.getLogger("alamount")
+COOKIE = "alamount_oturum"
 AD_DESENI = re.compile(r"^[A-Za-z0-9_\-.ÇĞİÖŞÜçğıöşü]{1,60}$")
 MAX_RAPOR = 50 * 1024 * 1024
 
@@ -72,7 +73,7 @@ class Merkez:
         self.panel_url = (ayarlar.get("MERKEZ", "panel_url") or "").rstrip("/")
         self.https = bool(ayarlar.get("MERKEZ", "ssl_sertifika"))
         self._dur = threading.Event()
-        pca_rpa.VARLIK_COZUCU = self._varlik_coz  # config.ini'deki 'varlik:AD' değerleri için
+        pca_analiz.VARLIK_COZUCU = self._varlik_coz  # config.ini'deki 'varlik:AD' değerleri için
 
     def _varlik_coz(self, ad, alan):
         v = self.db.varlik_oku(ad)
@@ -240,8 +241,16 @@ class Merkez:
         self.db.denetle(f"robot:{robot['ad']}", "varlik_okundu", v["ad"])
         return JSONResponse(v)
 
+    async def marka_dosyasi(self, request):
+        ad = request.path_params["ad"]
+        if ad not in ("logo.png", "logo_koyu.png", "favicon.png", "simge.png"):
+            return Response(status_code=404)
+        r = FileResponse(marka.kaynak(ad), media_type="image/png")
+        r.headers["Cache-Control"] = "public, max-age=86400"
+        return r
+
     async def saglik(self, request):
-        return JSONResponse({"durum": "ok", "zaman": time.time()})
+        return JSONResponse({"durum": "ok", "urun": marka.URUN, "surum": marka.SURUM, "zaman": time.time()})
 
     # ================================================================== panel
     def panel(self, rol="izleyici"):
@@ -749,6 +758,7 @@ yonetici: robotlar, varlıklar, zamanlamalar, kullanıcılar</p></div>
         R = Route
         rotalar = [
             R("/api/saglik", self.saglik),
+            R("/marka/{ad}", self.marka_dosyasi),
             R("/api/nabiz", api(self.api_nabiz), methods=["POST"]),
             R("/api/is/al", api(self.api_is_al), methods=["POST"]),
             R("/api/is/{id:int}/log", api(self.api_is_log), methods=["POST"]),
@@ -802,7 +812,7 @@ yonetici: robotlar, varlıklar, zamanlamalar, kullanıcılar</p></div>
         threading.Thread(target=self.arka_plan, daemon=True, name="arka_plan").start()
         host, port = self.ayarlar.get("MERKEZ", "adres") or "0.0.0.0", self.ayarlar.getint("MERKEZ", "port")
         cert, key = self.ayarlar.yol("MERKEZ", "ssl_sertifika"), self.ayarlar.yol("MERKEZ", "ssl_anahtar")
-        log.info("Kontrol Merkezi: %s://%s:%s  (veri: %s)", "https" if cert else "http", host, port, self.db.klasor)
+        log.info("Alamount RPA Kontrol Merkezi v%s: %s://%s:%s  (veri: %s)", marka.SURUM, "https" if cert else "http", host, port, self.db.klasor)
         if not cert:
             log.warning("HTTPS kapalı: robot anahtarları ve varlıklar ağda şifresiz gider. "
                         "[MERKEZ] ssl_sertifika / ssl_anahtar ayarlarını kullanın.")

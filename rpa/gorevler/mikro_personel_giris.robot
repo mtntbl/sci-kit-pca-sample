@@ -4,14 +4,14 @@ Documentation     Hazır Excel'deki verileri Mikro ERP > Personel Sicil Kartlar�
 ...               ÖNEMLİ
 ...               - Varsayılan KURU ÇALIŞMA'dır: hiçbir tuşa basmaz, yalnızca ne gireceğini loglar.
 ...                 Gerçek giriş için config.ini [ROBOT] kuru_calisma = hayir ya da
-...                 RPA_Bot.exe robot mikro_personel_giris --variable KURU_CALISMA:hayir
+...                 AlamountRPA.exe robot mikro_personel_giris --variable KURU_CALISMA:hayir
 ...               - Ekran öğelerinin yerleri (locator) kaynaklar\\mikro_ekran_haritasi.resource dosyasındadır.
 ...                 Kendi Mikro sürümünüze göre mikro_ekran_kesfi.robot ile çıkarıp düzenleyin.
 ...               - Mikro uzak masaüstünde (RDP) çalışıyorsa bot da O MAKİNEDE çalışmalıdır;
 ...                 RDP penceresinin içindeki öğeler yerel UI Automation'a görünmez.
 ...               - Kayıt tuşuna basılmaz (KAYDET=hayir): son kontrol ve kayıt insan tarafından yapılır.
 Library           RPA.Windows
-Library           RpaBotKeywords
+Library           AlamountRPA
 Library           OperatingSystem
 Library           Collections
 Resource          kaynaklar/mikro_ekran_haritasi.resource

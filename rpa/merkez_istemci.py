@@ -2,7 +2,7 @@
 """
 Kontrol Merkezi istemcisi (robot tarafı). Ajan, kuyruk işleri ve Robot görevleri kullanır.
 Bağlantı bilgisi config.ini [AJAN] bölümünden ya da ajanın alt süreçlere verdiği ortam değişkenlerinden gelir:
-  RPA_MERKEZ_URL, RPA_ROBOT_ADI, RPA_ROBOT_ANAHTARI, RPA_IS_ID, RPA_CA_DOSYASI, RPA_SSL_DOGRULA
+  ALAMOUNT_MERKEZ_URL, ALAMOUNT_ROBOT_ADI, ALAMOUNT_ROBOT_ANAHTARI, ALAMOUNT_IS_ID, ALAMOUNT_CA_DOSYASI, ALAMOUNT_SSL_DOGRULA
 """
 
 import json
@@ -34,27 +34,27 @@ class MerkezIstemci:
             if not ssl_dogrula:
                 self.ctx.check_hostname = False
                 self.ctx.verify_mode = ssl.CERT_NONE
-        self.is_id = int(os.environ["RPA_IS_ID"]) if os.environ.get("RPA_IS_ID", "").isdigit() else None
+        self.is_id = int(os.environ["ALAMOUNT_IS_ID"]) if os.environ.get("ALAMOUNT_IS_ID", "").isdigit() else None
 
     @classmethod
     def ayarlardan(cls, ayarlar=None):
         """Önce ortam değişkenleri (ajanın başlattığı alt süreç), sonra config.ini [AJAN]."""
         env = os.environ
-        if env.get("RPA_MERKEZ_URL"):
-            return cls(env["RPA_MERKEZ_URL"], env.get("RPA_ROBOT_ADI", ""), env.get("RPA_ROBOT_ANAHTARI", ""),
-                       env.get("RPA_CA_DOSYASI", ""), env.get("RPA_SSL_DOGRULA", "1") != "0")
+        if env.get("ALAMOUNT_MERKEZ_URL"):
+            return cls(env["ALAMOUNT_MERKEZ_URL"], env.get("ALAMOUNT_ROBOT_ADI", ""), env.get("ALAMOUNT_ROBOT_ANAHTARI", ""),
+                       env.get("ALAMOUNT_CA_DOSYASI", ""), env.get("ALAMOUNT_SSL_DOGRULA", "1") != "0")
         if ayarlar is None:
             raise MerkezHatasi("Merkez bağlantısı yok")
         return cls(ayarlar.cp.get("AJAN", "merkez_url", fallback="").strip(),
                    ayarlar.cp.get("AJAN", "robot_adi", fallback="").strip(),
-                   ayarlar.cp.get("AJAN", "robot_anahtari", fallback="").strip() or env.get("RPA_ROBOT_ANAHTARI", ""),
+                   ayarlar.cp.get("AJAN", "robot_anahtari", fallback="").strip() or env.get("ALAMOUNT_ROBOT_ANAHTARI", ""),
                    ayarlar.yol("AJAN", "ca_dosyasi"), ayarlar.getbool("AJAN", "ssl_dogrula"))
 
     def ortam(self):
         """Alt süreçlere aktarılacak ortam değişkenleri."""
-        return {"RPA_MERKEZ_URL": self.url, "RPA_ROBOT_ADI": self.robot_adi,
-                "RPA_ROBOT_ANAHTARI": self._yetki.split(":", 1)[1],
-                "RPA_SSL_DOGRULA": "1" if (self.ctx is None or self.ctx.verify_mode != ssl.CERT_NONE) else "0"}
+        return {"ALAMOUNT_MERKEZ_URL": self.url, "ALAMOUNT_ROBOT_ADI": self.robot_adi,
+                "ALAMOUNT_ROBOT_ANAHTARI": self._yetki.split(":", 1)[1],
+                "ALAMOUNT_SSL_DOGRULA": "1" if (self.ctx is None or self.ctx.verify_mode != ssl.CERT_NONE) else "0"}
 
     # ------------------------------------------------------------------ HTTP
     def istek(self, yontem, yol, veri=None, ham=None, icerik_turu="application/json", deneme=3):
@@ -121,7 +121,7 @@ class MerkezIstemci:
 
 def varlik_cozucu_kur(ayarlar=None):
     """config.ini'deki 'varlik:AD' değerlerinin merkezden çözülmesini sağlar (bağlantı varsa)."""
-    import pca_rpa
+    import pca_analiz
 
     try:
         ist = MerkezIstemci.ayarlardan(ayarlar)
@@ -135,5 +135,5 @@ def varlik_cozucu_kur(ayarlar=None):
         v = onbellek[ad]
         return v["kullanici_adi"] if alan == "kullanici" else v["deger"]
 
-    pca_rpa.VARLIK_COZUCU = coz
+    pca_analiz.VARLIK_COZUCU = coz
     return ist

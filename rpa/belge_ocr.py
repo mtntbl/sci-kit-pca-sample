@@ -20,7 +20,7 @@ from PIL import Image
 
 from ayarlar import tesseract_bul
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 
 KIMLIK_ORAN = 85.6 / 54.0  # ISO/IEC 7810 ID-1
 

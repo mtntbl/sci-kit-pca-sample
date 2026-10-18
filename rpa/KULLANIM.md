@@ -1,6 +1,8 @@
-# RPA Bot – Kullanım Kılavuzu
+<p align="center"><img src="marka/logo.png" alt="Alamount RPA" width="420"></p>
 
-Altı katmanlı bir robot. Hepsi tek pakette ve `RPA_Bot.exe` üzerinden çalışır:
+# Alamount RPA – Kullanım Kılavuzu
+
+Altı katmanlı bir robot. Hepsi tek pakette ve `AlamountRPA.exe` üzerinden çalışır:
 
 | Katman | Teknoloji | Ne yapar |
 |---|---|---|
@@ -19,8 +21,8 @@ Hiçbir parçası Claude'a, internete ya da başka bir lisansa bağlı değildir
 
 ## Hızlı başlangıç
 
-1. `RPA_Bot_Windows.zip` dosyasını bir klasöre çıkarın (ör. `C:\RPA_Bot`).
-2. `RPA_Bot.exe`'ye çift tıklayın. Bir menü açılır:
+1. `AlamountRPA_Windows.zip` dosyasını bir klasöre çıkarın (ör. `C:\AlamountRPA`).
+2. `AlamountRPA.exe`'ye çift tıklayın. Bir menü açılır:
 
 ```
   1. PCA analizi (input klasörü)
@@ -45,16 +47,16 @@ Hiçbir parçası Claude'a, internete ya da başka bir lisansa bağlı değildir
 ## Komut satırı
 
 ```
-RPA_Bot.exe kontrol                                   kurulum kontrolü
-RPA_Bot.exe ise-giris                                 input\ise_giris klasörünü işler
-RPA_Bot.exe ise-giris --tc 12345678901 --pdf D:\belge.pdf [--puantaj D:\PUANTAJ.xlsx]
-RPA_Bot.exe ocr D:\taranmis.pdf --cikti D:\metin.txt  taranmış PDF → metin
-RPA_Bot.exe pca --once | --watch | --file D:\veri.txt PCA analizi
-RPA_Bot.exe robot <görev> [Robot seçenekleri]         ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir
-RPA_Bot.exe gorevler                                  görev listesi
-RPA_Bot.exe mcp                                       MCP sunucusu (Claude Desktop için)
-RPA_Bot.exe merkez | ajan                             Kontrol Merkezi / robot ajanı (bölüm 6)
-RPA_Bot.exe kuyruk ise-giris-dagit | ise-giris-isle   merkez kuyruğuyla işe giriş
+AlamountRPA.exe kontrol                                   kurulum kontrolü
+AlamountRPA.exe ise-giris                                 input\ise_giris klasörünü işler
+AlamountRPA.exe ise-giris --tc 12345678901 --pdf D:\belge.pdf [--puantaj D:\PUANTAJ.xlsx]
+AlamountRPA.exe ocr D:\taranmis.pdf --cikti D:\metin.txt  taranmış PDF → metin
+AlamountRPA.exe pca --once | --watch | --file D:\veri.txt PCA analizi
+AlamountRPA.exe robot <görev> [Robot seçenekleri]         ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir
+AlamountRPA.exe gorevler                                  görev listesi
+AlamountRPA.exe mcp                                       MCP sunucusu (Claude Desktop için)
+AlamountRPA.exe merkez | ajan                             Kontrol Merkezi / robot ajanı (bölüm 6)
+AlamountRPA.exe kuyruk ise-giris-dagit | ise-giris-isle   merkez kuyruğuyla işe giriş
 --config D:\baska.ini                                 farklı ayar dosyası
 ```
 
@@ -114,7 +116,7 @@ Mikro'daki alan adları sürüme göre değişir. `gorevler\kaynaklar\mikro_ekra
 ## 3) OCR (taranmış PDF → metin)
 
 ```
-RPA_Bot.exe ocr D:\taranmis.pdf --cikti D:\metin.txt
+AlamountRPA.exe ocr D:\taranmis.pdf --cikti D:\metin.txt
 ```
 Ayarlar `[OCR]` bölümündedir: `dil = tur+eng`, `dpi = 300`, `psm_belge` / `psm_kimlik` (belge türüne göre sayfa bölümleme modu).
 Tesseract paketin `tesseract\` klasöründe gelir. Başka bir kurulum kullanmak için `tesseract_yolu` ayarını değiştirin.
@@ -122,7 +124,7 @@ Tesseract paketin `tesseract\` klasöründe gelir. Başka bir kurulum kullanmak 
 ## 4) Robot Framework görevleri
 
 `gorevler\` klasöründeki `.robot` dosyaları düz metindir; Not Defteri'yle düzenlenebilir.
-Bot kendi anahtar kelimelerini `RpaBotKeywords` kütüphanesiyle sunar:
+Bot kendi anahtar kelimelerini `AlamountRPA` kütüphanesiyle sunar:
 `İşe Giriş Klasörünü İşle`, `İşe Giriş Verisi Hazırla`, `PDF Metne Çevir`, `PDF Sayfalarını Görsele Çevir`,
 `Kimlik Kartlarını Kırp`, `Görselde OCR Yap`, `Excelden Giriş Verisi Oku`, `Son Hazır Excel`, `PCA Klasörünü İşle`,
 `Ayarı Oku`, `Klasör Yolu`, `TC Geçerli Mi` …
@@ -151,7 +153,7 @@ Her çalıştırmanın raporu `logs\robot\<görev>_<tarih>\log.html` dosyasında
 **b) MCP sunucusu (Claude Desktop ile robotu yönetme)**
 `%APPDATA%\Claude\claude_desktop_config.json` dosyasına şunu ekleyin:
 ```json
-{ "mcpServers": { "rpa-bot": { "command": "C:\\RPA_Bot\\RPA_Bot.exe", "args": ["mcp"] } } }
+{ "mcpServers": { "alamount-rpa": { "command": "C:\\AlamountRPA\\AlamountRPA.exe", "args": ["mcp"] } } }
 ```
 Claude'un kullanabileceği araçlar: `ocr_pdf`, `belge_analizi`, `ise_giris_hazirla`, `ise_giris_klasorunu_isle`,
 `pca_analizi`, `gorev_listesi`, `robot_gorevi_calistir` (Mikro görevleri varsayılan olarak kuru çalışır).
@@ -163,14 +165,14 @@ Tek paket iki rolde çalışır. Rolü config.ini ve çalıştırılan komut bel
 
 ```
                      ┌──────────────── Kontrol Merkezi (1 makine) ─────────────────┐
-  Tarayıcı (HR, BT) ─┤  RPA_Bot.exe merkez   →  http://SUNUCU:8765                  │
+  Tarayıcı (HR, BT) ─┤  AlamountRPA.exe merkez   →  http://SUNUCU:8765                  │
                      │  web paneli · iş kuyruğu · iş öğesi kuyrukları · zamanlamalar │
                      │  şifreli varlık kasası · loglar/raporlar · bildirimler        │
                      └──────────────▲───────────────────────────▲──────────────────┘
                                     │ HTTP(S), robot anahtarı   │
                      ┌──────────────┴─────────┐    ┌────────────┴───────────┐
                      │ Robot makinesi 1       │    │ Robot makinesi 2       │
-                     │ RPA_Bot.exe ajan       │    │ RPA_Bot.exe ajan       │
+                     │ AlamountRPA.exe ajan       │    │ AlamountRPA.exe ajan       │
                      └──────────┬─────────────┘    └────────────┬───────────┘
                                 └──── ortak ağ klasörü (\\sunucu\ik\ise_giris) ┘
 ```
@@ -178,7 +180,7 @@ Tek paket iki rolde çalışır. Rolü config.ini ve çalıştırılan komut bel
 ### Kurulum
 
 **Merkez makinesi** (7/24 açık bir sunucu ya da bilgisayar):
-1. Zip'i çıkarın (ör. `C:\RPA_Bot`).
+1. Zip'i çıkarın (ör. `C:\AlamountRPA`).
 2. `merkez_kur.bat` dosyasını **Yönetici olarak** çalıştırın. Bu betik merkezi Windows açılışında başlatan görevi kurar, güvenlik duvarında 8765 portunu açar ve merkezi başlatır.
 3. İlk yönetici parolası `merkez_veri\ilk_yonetici_parolasi.txt` dosyasındadır. `http://SUNUCU:8765` adresinden giriş yapın, sonra **Kullanıcılar** sayfasından parolanızı değiştirin ve bu dosyayı silin.
 4. **Robotlar → Robot ekle** ile her robot makinesi için bir robot oluşturun. Ekranda bir kez gösterilen anahtarı not edin.
@@ -194,8 +196,8 @@ Tek paket iki rolde çalışır. Rolü config.ini ve çalıştırılan komut bel
 5. Panelde robot birkaç saniye içinde **Boşta** görünür.
 
 Kurulumu betikle yapmak isterseniz, merkez makinesinde şu komutları kullanabilirsiniz:
-`RPA_Bot.exe merkez-robot ROBOT-1` (anahtarı yazar), `RPA_Bot.exe merkez-is pca --robot ROBOT-1 --bekle 30`
-(işi başlatır, bitmesini bekler; çıkış kodu 0 = başarılı), `RPA_Bot.exe merkez-parola admin` (parola sıfırlar).
+`AlamountRPA.exe merkez-robot ROBOT-1` (anahtarı yazar), `AlamountRPA.exe merkez-is pca --robot ROBOT-1 --bekle 30`
+(işi başlatır, bitmesini bekler; çıkış kodu 0 = başarılı), `AlamountRPA.exe merkez-parola admin` (parola sıfırlar).
 
 ### Panel
 
@@ -250,12 +252,12 @@ Tipik zamanlama: `*/10 8-18 * * 1-5` ile dağıtıcı, `*/10 8-18 * * 1-5` ile h
 
 ## 7) PCA analizi
 
-`input\` klasörüne `.txt` / `.csv` / `.xlsx` veri dosyası bırakın, sonra `RPA_Bot.exe pca --once` çalıştırın.
+`input\` klasörüne `.txt` / `.csv` / `.xlsx` veri dosyası bırakın, sonra `AlamountRPA.exe pca --once` çalıştırın.
 Ayarlar `[VERI]`, `[PCA]`, `[GRAFIK]`, `[CIKTI]`, `[EMAIL]` bölümlerindedir. Çıktı `output\<dosya>_<tarih>\` klasörüne yazılır.
 
 ## Otomatik çalıştırma
 
-`gorev_zamanlayici_kur.bat` iki görev oluşturur: **RPA_Bot_IseGiris** ve **RPA_Bot_PCA** (varsayılan olarak 15 dakikada bir).
+`gorev_zamanlayici_kur.bat` iki görev oluşturur: **AlamountRPA_IseGiris** ve **AlamountRPA_PCA** (varsayılan olarak 15 dakikada bir).
 Farklı aralık için: `gorev_zamanlayici_kur.bat 60`. Kaldırmak için: `gorev_zamanlayici_kaldir.bat`.
 Mikro girişi zamanlanmaz; HR onayından sonra elle başlatılması önerilir.
 

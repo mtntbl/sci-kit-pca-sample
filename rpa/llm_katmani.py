@@ -11,7 +11,7 @@ import json
 import logging
 import os
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 
 SISTEM = (
     "Türk kamu belgelerinden (e-Devlet çıktıları, T.C. kimlik kartı) personel bilgisi çıkaran bir veri "

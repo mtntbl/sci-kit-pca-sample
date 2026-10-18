@@ -10,9 +10,9 @@ import threading
 import urllib.request
 from email.message import EmailMessage
 
-import pca_rpa
+import pca_analiz
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 
 OLAY_ADLARI = {
     "is_basarisiz": "İş başarısız",
@@ -51,13 +51,13 @@ class Bildirici:
 
     def _eposta(self, olay, baslik, alanlar, baglanti):
         a = self.ayarlar
-        alicilar = pca_rpa.split_list(a.get("BILDIRIM", "eposta_alicilar") or a.get("EMAIL", "alicilar"))
+        alicilar = pca_analiz.split_list(a.get("BILDIRIM", "eposta_alicilar") or a.get("EMAIL", "alicilar"))
         if not alicilar:
             return
         msg = EmailMessage()
         msg["From"] = a.get("EMAIL", "gonderen") or a.get("EMAIL", "kullanici")
         msg["To"] = ", ".join(alicilar)
-        msg["Subject"] = f"[RPA] {OLAY_ADLARI.get(olay, olay)}: {baslik}"
+        msg["Subject"] = f"[Alamount RPA] {OLAY_ADLARI.get(olay, olay)}: {baslik}"
         govde = "\n".join(f"{k}: {v}" for k, v in alanlar.items())
         msg.set_content(f"{baslik}\n\n{govde}\n\n{baglanti}".strip())
         host, port = a.get("EMAIL", "smtp_sunucu"), a.getint("EMAIL", "smtp_port")
@@ -68,7 +68,7 @@ class Bildirici:
             if guv == "starttls":
                 smtp.starttls(context=ctx)
             kul = a.get("EMAIL", "kullanici")
-            sif = a.get("EMAIL", "sifre") or os.environ.get("PCA_RPA_SMTP_SIFRE", "")
+            sif = a.get("EMAIL", "sifre") or os.environ.get("ALAMOUNT_SMTP_SIFRE", "")
             if kul and sif:
                 smtp.login(kul, sif)
             smtp.send_message(msg)
@@ -78,6 +78,8 @@ class Bildirici:
             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
             "type": "AdaptiveCard", "version": "1.4",
             "body": [
+                {"type": "TextBlock", "text": "ALAMOUNT RPA", "size": "Small", "weight": "Bolder",
+                 "color": "accent", "spacing": "None"},
                 {"type": "TextBlock", "text": OLAY_ADLARI.get(olay, olay), "weight": "Bolder", "size": "Medium",
                  "color": RENK.get(olay, "default")},
                 {"type": "TextBlock", "text": baslik, "wrap": True},

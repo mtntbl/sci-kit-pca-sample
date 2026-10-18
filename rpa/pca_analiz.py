@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-PCA RPA Botu
-============
+Alamount RPA · PCA analizi
+==========================
 PCA_Example.ipynb'deki analizi otomatikleştirir:
 
   1. config.ini'deki giriş klasörünü tarar (*.txt / *.csv / *.xlsx).
@@ -12,11 +12,11 @@ PCA_Example.ipynb'deki analizi otomatikleştirir:
   6. (İsteğe bağlı) Sonuçları e-posta ile gönderir.
 
 Kullanım:
-  PCA_RPA.exe                 -> config.ini'deki moda göre çalışır
-  PCA_RPA.exe --once          -> klasördeki dosyaları bir kez işler ve çıkar (Görev Zamanlayıcı için)
-  PCA_RPA.exe --watch         -> klasörü sürekli izler
-  PCA_RPA.exe --config X.ini  -> farklı konfigürasyon dosyası
-  PCA_RPA.exe --init          -> varsayılan config.ini ve klasörleri oluşturur
+  AlamountRPA.exe pca                -> config.ini'deki moda göre çalışır
+  AlamountRPA.exe pca --once          -> klasördeki dosyaları bir kez işler ve çıkar (Görev Zamanlayıcı için)
+  AlamountRPA.exe pca --watch         -> klasörü sürekli izler
+  AlamountRPA.exe pca --config X.ini  -> farklı konfigürasyon dosyası
+  AlamountRPA.exe init              -> varsayılan config.ini ve klasörleri oluşturur
 """
 
 import argparse
@@ -43,16 +43,16 @@ import pandas as pd  # noqa: E402
 from sklearn.decomposition import PCA  # noqa: E402
 from sklearn.preprocessing import LabelEncoder, StandardScaler  # noqa: E402
 
-VERSION = "1.0.0"
-log = logging.getLogger("pca_rpa")
+from marka import SURUM as VERSION, URUN
+log = logging.getLogger("alamount")
 
 # config.ini'de "varlik:AD" / "varlik:AD.kullanici" değerleri bu fonksiyonla çözülür (merkez ya da ajan ayarlar)
 VARLIK_COZUCU = None
 
 DEFAULT_CONFIG = """\
 ; =====================================================================
-;  PCA RPA Botu - Konfigürasyon
-;  Göreli yollar PCA_RPA.exe'nin bulunduğu klasöre göredir.
+;  Alamount RPA - Konfigürasyon
+;  Göreli yollar AlamountRPA.exe'nin bulunduğu klasöre göredir.
 ;  evet/hayir, true/false, 1/0 değerleri kabul edilir.
 ; =====================================================================
 
@@ -123,12 +123,12 @@ smtp_port = 587
 ; guvenlik: starttls | ssl | yok
 guvenlik = starttls
 kullanici = kullanici@firma.com
-; Şifreyi buraya yazmak istemezseniz PCA_RPA_SMTP_SIFRE ortam değişkenini kullanın
+; Şifreyi buraya yazmak istemezseniz ALAMOUNT_SMTP_SIFRE ortam değişkenini kullanın
 sifre =
 gonderen = kullanici@firma.com
 ; Virgülle birden fazla alıcı
 alicilar = alici1@firma.com, alici2@firma.com
-konu = PCA RPA Raporu - {dosya}
+konu = Alamount RPA · PCA Raporu - {dosya}
 ; Hata durumunda da e-posta gönder
 hata_bildir = evet
 """
@@ -199,7 +199,7 @@ def setup_logging(settings):
     log.setLevel(level)
     log.handlers.clear()
     fh = TimedRotatingFileHandler(
-        os.path.join(log_dir, "pca_rpa.log"), when="midnight", backupCount=30, encoding="utf-8"
+        os.path.join(log_dir, "alamount_rpa.log"), when="midnight", backupCount=30, encoding="utf-8"
     )
     fh.setFormatter(fmt)
     log.addHandler(fh)
@@ -315,7 +315,7 @@ def make_colors(raw, settings):
         return [lo if v < thr else hi for v in vals.fillna(thr)], f"{col} < {thr:g}: {lo} / >= {thr:g}: {hi}"
     if col:
         log.warning("Renk sütunu '%s' bulunamadı, tek renk kullanılıyor", col)
-    return "tab:blue", ""
+    return "#04BAF3", ""
 
 
 def save_plots(scores, variance, raw, settings, out_dir, stem):
@@ -333,7 +333,8 @@ def save_plots(scores, variance, raw, settings, out_dir, stem):
         ax.scatter(scores["PC1"], scores["PC2"], c=colors, s=12, alpha=0.7)
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
-    ax.set_title(f"PCA - {stem}\n{legend}", fontsize=10)
+    ax.set_title(f"PCA - {stem}\n{legend}", fontsize=10, color="#022351")
+    fig.text(0.99, 0.01, URUN, ha="right", va="bottom", fontsize=8, color="#04BAF3")
     p = os.path.join(out_dir, f"{stem}_pca_scatter.png")
     fig.savefig(p, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
@@ -341,14 +342,15 @@ def save_plots(scores, variance, raw, settings, out_dir, stem):
 
     fig, ax = plt.subplots(figsize=(8, 5))
     x = np.arange(1, len(variance) + 1)
-    ax.bar(x, variance["Aciklanan_Varyans_Orani"], color="tab:blue", alpha=0.6, label="Bileşen")
-    ax.step(x, variance["Kumulatif_Varyans"], where="mid", color="tab:red", label="Kümülatif")
+    ax.bar(x, variance["Aciklanan_Varyans_Orani"], color="#04BAF3", alpha=0.75, label="Bileşen")
+    ax.step(x, variance["Kumulatif_Varyans"], where="mid", color="#022351", label="Kümülatif")
     ax.set_xlabel("Bileşen")
     ax.set_ylabel("Açıklanan varyans oranı")
     ax.set_ylim(0, 1.05)
     ax.set_xticks(x)
     ax.legend()
-    ax.set_title(f"Açıklanan Varyans - {stem}")
+    ax.set_title(f"Açıklanan Varyans - {stem}", color="#022351")
+    fig.text(0.99, 0.01, URUN, ha="right", va="bottom", fontsize=8, color="#04BAF3")
     p = os.path.join(out_dir, f"{stem}_variance.png")
     fig.savefig(p, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
@@ -362,7 +364,7 @@ def save_excel(scores, variance, loadings, raw, pca, src, settings, out_dir, ste
         {
             "Alan": [
                 "Kaynak dosya", "İşlem zamanı", "Satır sayısı", "Analize giren sütunlar",
-                "Bileşen sayısı", "Seçili bileşenlerin açıkladığı toplam varyans", "Bot sürümü",
+                "Bileşen sayısı", "Seçili bileşenlerin açıkladığı toplam varyans", f"{URUN} sürümü",
             ],
             "Deger": [
                 os.path.basename(src), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), len(scores),
@@ -377,6 +379,7 @@ def save_excel(scores, variance, loadings, raw, pca, src, settings, out_dir, ste
         variance.to_excel(w, sheet_name="Varyans", index=False)
         loadings.to_excel(w, sheet_name="Yukler")
         sc.to_excel(w, sheet_name="PCA_Skorlari", index=False)
+        w.book.properties.creator = URUN
         for ws in w.book.worksheets:
             for col in ws.columns:
                 width = max(len(str(c.value)) if c.value is not None else 0 for c in list(col)[:200])
@@ -406,7 +409,7 @@ def send_mail(settings, subject, body, attachments=()):
             if sec == "starttls":
                 smtp.starttls()
             user = settings.get("EMAIL", "kullanici")
-            pwd = settings.get("EMAIL", "sifre") or os.environ.get("PCA_RPA_SMTP_SIFRE", "")
+            pwd = settings.get("EMAIL", "sifre") or os.environ.get("ALAMOUNT_SMTP_SIFRE", "")
             if user and pwd:
                 smtp.login(user, pwd)
             smtp.send_message(msg)
@@ -479,7 +482,7 @@ def process_file(path, settings):
         except Exception as move_err:
             log.error("Dosya hata klasörüne taşınamadı: %s", move_err)
         if settings.getbool("EMAIL", "hata_bildir"):
-            send_mail(settings, f"PCA RPA HATA - {name}", f"{name} işlenemedi:\n\n{traceback.format_exc()}")
+            send_mail(settings, f"Alamount RPA · PCA HATA - {name}", f"{name} işlenemedi:\n\n{traceback.format_exc()}")
         return False
 
 
@@ -523,7 +526,7 @@ def init_files(config_path):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=f"PCA RPA Botu v{VERSION}")
+    ap = argparse.ArgumentParser(description=f"Alamount RPA v{VERSION}")
     ap.add_argument("--config", default=os.path.join(app_dir(), "config.ini"), help="config.ini yolu")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--once", action="store_true", help="Bir kez çalış ve çık")
@@ -536,13 +539,13 @@ def main(argv=None):
         init_files(args.config)
         return 0
     if not os.path.exists(args.config):
-        print(f"config.ini bulunamadı: {args.config}\nOluşturmak için: PCA_RPA.exe --init")
+        print(f"config.ini bulunamadı: {args.config}\nOluşturmak için: AlamountRPA.exe init")
         init_files(args.config)
 
     settings = Settings(args.config)
     setup_logging(settings)
     mode = "watch" if args.watch else "once" if args.once else settings.get("GENEL", "mod").lower()
-    log.info("PCA RPA v%s başladı | mod=%s | config=%s", VERSION, mode, args.config)
+    log.info("Alamount RPA · PCA v%s başladı | mod=%s | config=%s", VERSION, mode, args.config)
 
     if args.file:
         return 0 if process_file(os.path.abspath(args.file), settings) else 1

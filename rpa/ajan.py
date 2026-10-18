@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Robot ajanı — robot makinesinde sürekli çalışır:  RPA_Bot.exe ajan
+Robot ajanı — robot makinesinde sürekli çalışır:  AlamountRPA.exe ajan
   * Merkeze düzenli nabız gönderir (çevrimiçi/meşgul, iptal istekleri)
   * Boştayken merkezden iş alır, işi beyaz listeden (surecler.py) geçirip alt süreç olarak çalıştırır
   * Çıktıyı canlı olarak merkeze aktarır, bitince Robot Framework raporlarını yükler
@@ -23,14 +23,14 @@ import time
 import surecler
 from merkez_istemci import MerkezHatasi, MerkezIstemci
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 RAPOR_DESENI = re.compile(r"Rapor:\s*(.+?log\.html)\s*$")
 
 
 def _exe_komutu():
     if getattr(sys, "frozen", False):
         return [sys.executable]
-    return [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "rpa_bot.py")]
+    return [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "alamount_rpa.py")]
 
 
 def _agaci_sonlandir(proc):
@@ -100,11 +100,11 @@ class Ajan:
             self._bitir(is_id, False, None, f"Reddedildi: {e}")
             return
         tam = _exe_komutu() + ["--config", self.ayarlar.path] + cmd
-        ortam = dict(os.environ, **self.istemci.ortam(), RPA_IS_ID=str(is_id), PYTHONIOENCODING="utf-8",
+        ortam = dict(os.environ, **self.istemci.ortam(), ALAMOUNT_IS_ID=str(is_id), PYTHONIOENCODING="utf-8",
                      PYTHONUTF8="1")
         ca = self.ayarlar.yol("AJAN", "ca_dosyasi")
         if ca:
-            ortam["RPA_CA_DOSYASI"] = ca
+            ortam["ALAMOUNT_CA_DOSYASI"] = ca
         log.info("İş #%s başlıyor (deneme %s): %s", is_id, j.get("deneme"), " ".join(cmd))
         ek = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
         proc = subprocess.Popen(tam, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
@@ -192,7 +192,7 @@ class Ajan:
 
     # ------------------------------------------------------------------ ana döngü
     def calistir(self):
-        log.info("Robot ajanı başladı: %s → %s", self.istemci.robot_adi, self.istemci.url)
+        log.info("Alamount RPA robot ajanı başladı: %s → %s", self.istemci.robot_adi, self.istemci.url)
         threading.Thread(target=self._nabiz_dongusu, daemon=True, name="nabiz").start()
         try:
             while not self._dur.is_set():

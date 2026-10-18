@@ -1,15 +1,15 @@
 @echo off
 chcp 65001 >nul
-REM RPA Bot gorevlerini Windows Gorev Zamanlayici'ya ekler.
+REM Alamount RPA gorevlerini Windows Gorev Zamanlayici'ya ekler.
 REM Kullanim: gorev_zamanlayici_kur.bat [dakika]   (varsayilan 15 dakikada bir)
 cd /d "%~dp0"
 set ARALIK=%1
 if "%ARALIK%"=="" set ARALIK=15
-schtasks /Create /F /TN "RPA_Bot_IseGiris" /SC MINUTE /MO %ARALIK% /TR "\"%~dp0RPA_Bot.exe\" --config \"%~dp0config.ini\" ise-giris"
+schtasks /Create /F /TN "AlamountRPA_IseGiris" /SC MINUTE /MO %ARALIK% /TR "\"%~dp0AlamountRPA.exe\" --config \"%~dp0config.ini\" ise-giris"
 if errorlevel 1 goto :hata
-schtasks /Create /F /TN "RPA_Bot_PCA" /SC MINUTE /MO %ARALIK% /TR "\"%~dp0RPA_Bot.exe\" --config \"%~dp0config.ini\" pca --once"
+schtasks /Create /F /TN "AlamountRPA_PCA" /SC MINUTE /MO %ARALIK% /TR "\"%~dp0AlamountRPA.exe\" --config \"%~dp0config.ini\" pca --once"
 if errorlevel 1 goto :hata
-echo "RPA_Bot_IseGiris" ve "RPA_Bot_PCA" gorevleri %ARALIK% dakikada bir calisacak sekilde olusturuldu.
+echo "AlamountRPA_IseGiris" ve "AlamountRPA_PCA" gorevleri %ARALIK% dakikada bir calisacak sekilde olusturuldu.
 pause
 exit /b 0
 :hata

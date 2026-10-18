@@ -1,4 +1,4 @@
-name: Build RPA Bot (Windows)
+name: Build Alamount RPA (Windows)
 
 on:
   push:
@@ -45,19 +45,20 @@ jobs:
           & "$t\tesseract.exe" --list-langs
 
       - name: Build exe (PyInstaller onedir)
-        run: pyinstaller --noconfirm --clean RPA_Bot.spec
+        run: pyinstaller --noconfirm --clean AlamountRPA.spec
 
       - name: Assemble package
         run: |
           $p = "paket"
           New-Item -ItemType Directory -Force $p | Out-Null
-          Copy-Item -Recurse dist\RPA_Bot\* $p\
+          Copy-Item -Recurse dist\AlamountRPA\* $p\
           foreach ($d in "input","input\ise_giris","output","archive","error","logs") {
             New-Item -ItemType Directory -Force "$p\$d" | Out-Null
             New-Item -ItemType File -Force "$p\$d\.gitkeep" | Out-Null
           }
           Copy-Item config.ini, KULLANIM.md, calistir.bat, izleme_modu.bat, gorev_zamanlayici_kur.bat, gorev_zamanlayici_kaldir.bat, merkez_kur.bat, ajan_kur.bat, merkez_ajan_kaldir.bat $p\
           Copy-Item -Recurse gorevler $p\gorevler
+          Copy-Item -Recurse marka $p\marka
           Copy-Item -Recurse ornek_veri $p\ornek_veri
           # Tesseract (taşınabilir): yalnızca çalışma için gerekli dosyalar
           $t = "C:\Program Files\Tesseract-OCR"
@@ -67,16 +68,16 @@ jobs:
           if (Test-Path "$t\tessdata\configs") { Copy-Item -Recurse "$t\tessdata\configs" "$p\tesseract\tessdata\configs" }
           Copy-Item "$t\*.txt", "$t\*.md" "$p\tesseract\" -ErrorAction SilentlyContinue
           "{0:N0} MB" -f ((Get-ChildItem $p -Recurse | Measure-Object Length -Sum).Sum / 1MB)
-          Compress-Archive -Path "$p\*" -DestinationPath RPA_Bot_Windows.zip -Force
+          Compress-Archive -Path "$p\*" -DestinationPath AlamountRPA_Windows.zip -Force
 
       - name: Smoke test - setup check, PCA, OCR onboarding, Mikro dry run
         run: |
           # Paket kopyasında test et; PATH'teki Tesseract'ı gizle ki paketteki kullanılsın
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Tesseract' }) -join ';'
-          Expand-Archive RPA_Bot_Windows.zip -DestinationPath smoke -Force
+          Expand-Archive AlamountRPA_Windows.zip -DestinationPath smoke -Force
           Set-Location smoke
           (Get-Content config.ini) -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content -Encoding utf8 config.ini
-          function Run([string[]]$a) { & .\RPA_Bot.exe @a; if ($LASTEXITCODE -ne 0) { throw "RPA_Bot $a failed ($LASTEXITCODE)" } }
+          function Run([string[]]$a) { & .\AlamountRPA.exe @a; if ($LASTEXITCODE -ne 0) { throw "AlamountRPA $a failed ($LASTEXITCODE)" } }
           Run kontrol
           Copy-Item ornek_veri\data2.txt input\
           Run pca, --once
@@ -91,7 +92,7 @@ jobs:
         continue-on-error: true
         working-directory: rpa/smoke
         run: |
-          .\RPA_Bot.exe robot ornek_masaustu_notepad
+          .\AlamountRPA.exe robot ornek_masaustu_notepad
           if ($LASTEXITCODE -ne 0) { throw "notepad robot failed" }
           Get-Content output\notepad_ornek.txt
 
@@ -99,19 +100,19 @@ jobs:
         continue-on-error: true
         working-directory: rpa/smoke
         run: |
-          .\RPA_Bot.exe robot ornek_tarayici
+          .\AlamountRPA.exe robot ornek_tarayici
           if ($LASTEXITCODE -ne 0) { throw "browser robot failed" }
 
       - name: Smoke test - Kontrol Merkezi + robot ajanı (iki ayrı kurulum)
         run: |
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Tesseract' }) -join ';'
-          Expand-Archive RPA_Bot_Windows.zip -DestinationPath merkez -Force
-          Expand-Archive RPA_Bot_Windows.zip -DestinationPath robot1 -Force
+          Expand-Archive AlamountRPA_Windows.zip -DestinationPath merkez -Force
+          Expand-Archive AlamountRPA_Windows.zip -DestinationPath robot1 -Force
           $m = (Resolve-Path merkez\config.ini).Path
           $r = (Resolve-Path robot1\config.ini).Path
           (Get-Content $m) -replace '^port = .*', 'port = 18765' | Set-Content -Encoding utf8 $m
-          $sifre = ((& merkez\RPA_Bot.exe --config $m merkez-parola admin) -split ': ')[-1].Trim()
-          $srv = Start-Process merkez\RPA_Bot.exe -ArgumentList "--config", "`"$m`"", "merkez" -PassThru `
+          $sifre = ((& merkez\AlamountRPA.exe --config $m merkez-parola admin) -split ': ')[-1].Trim()
+          $srv = Start-Process merkez\AlamountRPA.exe -ArgumentList "--config", "`"$m`"", "merkez" -PassThru `
                    -WorkingDirectory merkez -RedirectStandardOutput merkez.out -RedirectStandardError merkez.err
           $ok = $false
           foreach ($i in 1..60) { try { Invoke-RestMethod http://127.0.0.1:18765/api/saglik | Out-Null; $ok = $true; break } catch { Start-Sleep 1 } }
@@ -122,7 +123,7 @@ jobs:
           $pano = Invoke-WebRequest http://127.0.0.1:18765/ -WebSession $s
           if ($pano.Content -notmatch 'Pano') { throw "Panel girişi başarısız" }
           # robot kaydı + ajan
-          $key = ((& merkez\RPA_Bot.exe --config $m merkez-robot CI-ROBOT) | Select-String 'robot_anahtari = (.+)').Matches[0].Groups[1].Value
+          $key = ((& merkez\AlamountRPA.exe --config $m merkez-robot CI-ROBOT) | Select-String 'robot_anahtari = (.+)').Matches[0].Groups[1].Value
           (Get-Content $r) -replace '^merkez_url =.*', 'merkez_url = http://127.0.0.1:18765' `
                            -replace '^robot_adi =.*', 'robot_adi = CI-ROBOT' `
                            -replace '^robot_anahtari =.*', "robot_anahtari = $key" `
@@ -130,9 +131,9 @@ jobs:
                            -replace '^dosya_bekleme_sn = .*', 'dosya_bekleme_sn = 0' | Set-Content -Encoding utf8 $r
           Copy-Item robot1\ornek_veri\data2.txt robot1\input\
           Copy-Item robot1\ornek_veri\ise_giris\* robot1\input\ise_giris\
-          $ajan = Start-Process robot1\RPA_Bot.exe -ArgumentList "--config", "`"$r`"", "ajan" -PassThru `
+          $ajan = Start-Process robot1\AlamountRPA.exe -ArgumentList "--config", "`"$r`"", "ajan" -PassThru `
                     -WorkingDirectory robot1 -RedirectStandardOutput ajan.out -RedirectStandardError ajan.err
-          function Is([string[]]$a) { & merkez\RPA_Bot.exe --config $m merkez-is @a; if ($LASTEXITCODE -ne 0) { Get-Content ajan.out -Tail 40; throw "merkez-is $a failed" } }
+          function Is([string[]]$a) { & merkez\AlamountRPA.exe --config $m merkez-is @a; if ($LASTEXITCODE -ne 0) { Get-Content ajan.out -Tail 40; throw "merkez-is $a failed" } }
           try {
             Is pca, --robot, CI-ROBOT, --bekle, 5
             Is ise-giris-dagit, --bekle, 5
@@ -163,11 +164,11 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: rpa-v3.0.0-${{ github.run_number }}
-          name: RPA Bot Windows v3.0.0 (build ${{ github.run_number }})
+          tag_name: alamount-rpa-v3.1.0-${{ github.run_number }}
+          name: Alamount RPA v3.1.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
-          files: rpa/RPA_Bot_Windows.zip
+          files: rpa/AlamountRPA_Windows.zip
           body: |
-            RPA Bot – Windows paketi (Kontrol Merkezi + robot ajanı + PCA + OCR + işe giriş + Robot Framework + MCP).
-            `RPA_Bot_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
+            Alamount RPA – Windows paketi (Kontrol Merkezi + robot ajanı + PCA + OCR + işe giriş + Robot Framework + MCP).
+            `AlamountRPA_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
             Tesseract OCR (Türkçe dil paketiyle) paketin içindedir; ayrıca kurulum gerekmez.

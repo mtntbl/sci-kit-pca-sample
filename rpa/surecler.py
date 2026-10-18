@@ -29,7 +29,7 @@ def katalog(gorev_klasoru):
 
 
 def komut(surec, argumanlar, gorev_klasoru):
-    """Süreci RPA_Bot komut satırı argümanlarına çevirir; geçersizse ValueError."""
+    """Süreci AlamountRPA.exe komut satırı argümanlarına çevirir; geçersizse ValueError."""
     argumanlar = [str(a) for a in (argumanlar or []) if str(a).strip()]
     for a in argumanlar:
         if not DEGISKEN.match(a):

@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 
-import pca_rpa
+import pca_analiz
 
 EK_CONFIG = """
 ; =====================================================================
@@ -69,7 +69,7 @@ cikti = logs\\robot
 kuru_calisma = evet
 
 ; =====================================================================
-;  KONTROL MERKEZİ (yalnızca merkez makinesinde: RPA_Bot.exe merkez)
+;  KONTROL MERKEZİ (yalnızca merkez makinesinde: AlamountRPA.exe merkez)
 ;  Herhangi bir değer yerine varlik:AD (parola) ya da varlik:AD.kullanici yazılabilir;
 ;  değer merkezin şifreli kasasından okunur.
 ; =====================================================================
@@ -104,7 +104,7 @@ eposta_alicilar =
 teams_webhook =
 
 ; =====================================================================
-;  ROBOT AJANI (robot makinelerinde: RPA_Bot.exe ajan)
+;  ROBOT AJANI (robot makinelerinde: AlamountRPA.exe ajan)
 ; =====================================================================
 
 [AJAN]
@@ -112,19 +112,19 @@ teams_webhook =
 merkez_url =
 ; Panelde Robotlar > Robot ekle ile alınan ad ve anahtar
 robot_adi =
-; Anahtarı dosyaya yazmak istemezseniz RPA_ROBOT_ANAHTARI ortam değişkenini kullanın
+; Anahtarı dosyaya yazmak istemezseniz ALAMOUNT_ROBOT_ANAHTARI ortam değişkenini kullanın
 robot_anahtari =
 nabiz_sn = 15
-; Merkez kendinden imzalı sertifika kullanıyorsa: ca_dosyasi = C:\\RPA_Bot\\merkez.crt
+; Merkez kendinden imzalı sertifika kullanıyorsa: ca_dosyasi = C:\\AlamountRPA\\merkez.crt
 ca_dosyasi =
 ssl_dogrula = evet
 """
 
-TAM_CONFIG = pca_rpa.DEFAULT_CONFIG + EK_CONFIG
+TAM_CONFIG = pca_analiz.DEFAULT_CONFIG + EK_CONFIG
 
 
-class Ayarlar(pca_rpa.Settings):
-    """pca_rpa.Settings'in tüm bölümleri tanıyan sürümü."""
+class Ayarlar(pca_analiz.Settings):
+    """pca_analiz.Settings'in tüm bölümleri tanıyan sürümü."""
 
     def __init__(self, path):
         import configparser
@@ -142,14 +142,14 @@ class Ayarlar(pca_rpa.Settings):
         p = self.get(sec, key)
         if not p:
             return ""
-        p = pca_rpa.resolve(p, self.base)
+        p = pca_analiz.resolve(p, self.base)
         if olustur:
             os.makedirs(p, exist_ok=True)
         return p
 
 
 def varsayilan_config_yolu():
-    return os.path.join(pca_rpa.app_dir(), "config.ini")
+    return os.path.join(pca_analiz.app_dir(), "config.ini")
 
 
 def ayarlari_yukle(path=None):

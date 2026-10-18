@@ -3,9 +3,9 @@ Documentation     Açık Mikro penceresindeki ekran öğelerini (ağacı) listel
 ...               Çıktıdaki name / automationid / class değerleriyle
 ...               kaynaklar\\mikro_ekran_haritasi.resource dosyasını doldurun.
 ...               Kullanım: Mikro'da Personel Sicil Kartı ekranını açın, sonra:
-...                   RPA_Bot.exe robot mikro_ekran_kesfi
+...                   AlamountRPA.exe robot mikro_ekran_kesfi
 Library           RPA.Windows
-Library           RpaBotKeywords
+Library           AlamountRPA
 Resource          kaynaklar/mikro_ekran_haritasi.resource
 
 *** Variables ***

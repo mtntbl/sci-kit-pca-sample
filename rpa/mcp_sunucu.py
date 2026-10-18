@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 MCP sunucusu (stdio). Claude Desktop / Claude Code gibi MCP istemcilerinin robotu araç olarak
-kullanmasını sağlar:  RPA_Bot.exe mcp
+kullanmasını sağlar:  AlamountRPA.exe mcp
 
 Claude Desktop ayarı (claude_desktop_config.json):
-  {"mcpServers": {"rpa-bot": {"command": "C:\\\\RPA_Bot\\\\RPA_Bot.exe", "args": ["mcp"]}}}
+  {"mcpServers": {"alamount-rpa": {"command": "C:\\\\AlamountRPA\\\\AlamountRPA.exe", "args": ["mcp"]}}}
 
 DİKKAT: Araç sonuçları (OCR metni, kişisel veriler) istemci üzerinden modele gider.
 """
@@ -20,13 +20,13 @@ from mcp.server.mcpserver import MCPServer
 import ayarlar as ay
 import belge_ocr as bo
 import ise_giris
-import pca_rpa
+import pca_analiz
 
 
 def sunucu_olustur(config_yolu):
     ayarlar = ay.ayarlari_yukle(config_yolu)
     server = MCPServer(
-        name="rpa-bot",
+        name="alamount-rpa",
         instructions=(
             "Yerel RPA robotu: PDF/görsel OCR (Türkçe), işe giriş verisi hazırlama (Puantaj + personel PDF → "
             "Mikro'ya hazır Excel), PCA analizi ve Robot Framework görevleri. Dosya yolları bu bilgisayardaki "
@@ -67,9 +67,9 @@ def sunucu_olustur(config_yolu):
     def pca_analizi(dosya_yolu: str = "") -> str:
         """Verilen veri dosyasına (ya da input klasöründekilere) PCA uygular; Excel rapor + grafik üretir."""
         if dosya_yolu:
-            ok = pca_rpa.process_file(os.path.abspath(dosya_yolu), ayarlar)
+            ok = pca_analiz.process_file(os.path.abspath(dosya_yolu), ayarlar)
             return "Başarılı" if ok else "Hata — logs klasörüne bakın"
-        ok, hata = pca_rpa.run_once(ayarlar)
+        ok, hata = pca_analiz.run_once(ayarlar)
         return f"Başarılı: {ok}, Hatalı: {hata}"
 
     @server.tool()
@@ -81,11 +81,11 @@ def sunucu_olustur(config_yolu):
     @server.tool()
     def robot_gorevi_calistir(gorev: str, kuru_calisma: bool = True) -> str:
         """Bir Robot Framework görevini çalıştırır (ör. ise_giris_hazirla). Mikro görevleri varsayılan kuru çalışır."""
-        import rpa_bot
+        import alamount_rpa
 
         buf = io.StringIO()
         with redirect_stdout(buf):
-            kod = rpa_bot.robot_calistir(ayarlar, gorev, ["--variable", f"KURU_CALISMA:{'evet' if kuru_calisma else 'hayir'}",
+            kod = alamount_rpa.robot_calistir(ayarlar, gorev, ["--variable", f"KURU_CALISMA:{'evet' if kuru_calisma else 'hayir'}",
                                                           "--console", "dotted"])
         return f"Çıkış kodu: {kod}\n{buf.getvalue()[-4000:]}"
 

@@ -16,7 +16,7 @@ import belge_ocr as bo
 import ise_giris
 from merkez_istemci import MerkezIstemci
 
-log = logging.getLogger("pca_rpa")
+log = logging.getLogger("alamount")
 KUYRUK = "ise_giris"
 
 

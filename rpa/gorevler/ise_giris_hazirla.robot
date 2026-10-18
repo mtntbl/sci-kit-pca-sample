@@ -2,7 +2,7 @@
 Documentation     İşe giriş belgelerini hazırlar.
 ...               input\\ise_giris klasöründeki <TC>.pdf dosyalarını OCR ile okur, Puantaj'la TC üzerinden
 ...               eşleştirir, checklist kurallarını uygular ve girişe hazır Excel üretir.
-Library           RpaBotKeywords
+Library           AlamountRPA
 Library           RPA.FileSystem
 
 *** Tasks ***
