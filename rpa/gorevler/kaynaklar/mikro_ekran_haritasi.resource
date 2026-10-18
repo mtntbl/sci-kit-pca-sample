@@ -3,7 +3,7 @@ Documentation     Mikro ERP > Personel Sicil Kartları ekran haritası (locator'
 ...
 ...               BU DEĞERLER ŞABLONDUR. Mikro sürümüne göre değişir; mikro_ekran_kesfi.robot ile
 ...               gerçek name / automationid değerlerini çıkarıp aşağıya yazın.
-...               Locator sözdizimi (RPA.Windows):
+...               Locator sözdizimi (RPA.Windows) — regex içinde BOŞLUK kullanmayın, yerine . yazın:
 ...                 name:"Giriş Tarihi"             → görünen ad
 ...                 id:txtGirisTarihi               → AutomationId
 ...                 class:Edit and name:"Cadde"     → birleşik
@@ -12,7 +12,7 @@ Documentation     Mikro ERP > Personel Sicil Kartları ekran haritası (locator'
 
 *** Variables ***
 ${MIKRO_PENCERE}          regex:.*Mikro.*
-${MIKRO_SICIL_PENCERE}    regex:.*Personel Sicil.*
+${MIKRO_SICIL_PENCERE}    regex:.*Personel.Sicil.*
 ${MIKRO_JUMP_KISAYOL}     {Ctrl}j
 ${MIKRO_EKRAN_KODU}       111100
 ${MIKRO_KAYDET}           name:"Kaydet"

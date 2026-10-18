@@ -16,7 +16,7 @@ Not Defteri Otomasyonu
     Remove File    ${hedef}
     ${ozet}=    Özet Metni Hazırla
     Start Process    notepad.exe
-    Control Window    regex:.*(Notepad|Not Defteri|Untitled|Adsız).*    timeout=20
+    Control Window    regex:.*(Notepad|Defteri|Untitled|Adsız).*    timeout=20
     Sleep    1s
     Send Keys    keys=${ozet}    interval=0.005
     Send Keys    keys={Ctrl}s
